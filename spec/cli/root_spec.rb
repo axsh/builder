@@ -13,8 +13,14 @@ describe Builder::Cli::Root do
   end
 
   describe "exec" do
-    it "gives nothing" do
-      expect(subject.invoke(:exec)).to eq ""
+
+    before do
+      generate_sample_builder_file
+      subject.invoke(:exec)
+    end
+
+    it "loads .builder" do
+      expect(Builder.config).to be_an_instance_of Hash
     end
   end
 end

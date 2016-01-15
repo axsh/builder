@@ -1,3 +1,5 @@
+require 'yaml'
+
 module Builder::Cli
   class Root < Thor
     desc "init", "init"
@@ -9,7 +11,7 @@ module Builder::Cli
 
     desc "exec", "exec"
     def exec
-      ""
+      Builder.config = YAML.load_file(".builder")
     end
   end
 end
