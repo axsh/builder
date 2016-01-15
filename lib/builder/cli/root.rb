@@ -11,7 +11,7 @@ module Builder::Cli
 
     desc "exec", "exec"
     def exec
-      Builder.config = YAML.load_file(".builder")
+      Builder.recipe = YAML.load_file("builder.yml")
     end
   end
 end

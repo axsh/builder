@@ -4,7 +4,7 @@ require 'thor'
 module Builder
 
   class << self
-    attr_accessor :config
+    attr_accessor :recipe
   end
 
   module Cli

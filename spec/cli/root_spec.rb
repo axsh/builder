@@ -19,8 +19,8 @@ describe Builder::Cli::Root do
       subject.invoke(:exec)
     end
 
-    it "loads .builder" do
-      expect(Builder.config).to be_an_instance_of Hash
+    it "loads builder.yml" do
+      expect(Builder.recipe).to be_an_instance_of Hash
     end
   end
 end
