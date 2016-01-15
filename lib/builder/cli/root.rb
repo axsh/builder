@@ -6,5 +6,10 @@ module Builder::Cli
         File.open(file,"w") if not File.exist?(file)
       end
     end
+
+    desc "exec", "exec"
+    def exec
+      ""
+    end
   end
 end
