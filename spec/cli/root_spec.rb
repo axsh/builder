@@ -21,6 +21,7 @@ describe Builder::Cli::Root do
 
     it "loads builder.yml" do
       expect(Builder.recipe).to be_an_instance_of Hash
+      expect(Builder.recipe['nodes']).to eq []
     end
   end
 end
