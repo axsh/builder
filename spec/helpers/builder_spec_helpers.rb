@@ -15,6 +15,7 @@ nodes:
     name: "dcmgr"
     provision: 
       spec:
+        type: "kvm"
         os: "centos6.7"
         disk: 30
         memory: 4000
