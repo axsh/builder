@@ -21,7 +21,17 @@ describe Builder::Cli::Root do
 
     it "loads builder.yml" do
       expect(Builder.recipe).to be_an_instance_of Hash
-      expect(Builder.recipe['nodes']).to eq []
+    end
+
+    it "contains bare-metal and dcmgr" do
+      n = Builder.recipe['nodes']
+      expect(n['bare-metal']).not_to eq nil
+      expect(n['dcmgr']).not_to eq nil
+    end
+
+    it "passes validation" do
+      subject.validate
+      expect(Builder.recipe['validated']).to eq true
     end
   end
 end

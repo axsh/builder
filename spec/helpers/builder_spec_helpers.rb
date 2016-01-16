@@ -1,6 +1,6 @@
 
 def sample_builder_yml
-"
+'
 ---
 nodes:
   bare-metal:
@@ -36,7 +36,7 @@ nodes:
       ip: "192.168.100.2"
       user: "root"
       key: "/path/to/private_key"
-"
+'
 end
 
 def generate_sample_builder_file
