@@ -1,5 +1,5 @@
 
-def sample_builder_yml
+def with_all
 '
 ---
 nodes:
@@ -39,14 +39,22 @@ nodes:
 '
 end
 
-def generate_sample_builder_file
-  File.open("builder.yml", "w") do |f|
-    f.write sample_builder_yml
-  end
+def with_one_node
+'
+---
+nodes:
+  bare-metal:
+    name: "bare-metal"
+    ssh:
+      from: "none"
+      ip: "172.16.64.10"
+      user: "bare-metal-user"
+      key: "/path/to/private_key"
+'
 end
 
-def builder_pry
-  FakeFS.deactivate!
-  binding.pry
-  FakeFS.activate!
+def generate_builder_file(method_name)
+  File.open("#{Dir::pwd}/builder.yml", "w") do |f|
+    f.write send(method_name)
+  end
 end

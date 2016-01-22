@@ -11,12 +11,15 @@ module Builder::Cli
 
     desc "exec", "exec"
     def exec
-      Builder.recipe = YAML.load_file("builder.yml")
     end
 
     no_tasks {
       def validate
         Builder.recipe['validated'] = true
+      end
+
+      def load_conf
+        Builder.recipe = YAML.load_file("builder.yml")
       end
     }
   end
