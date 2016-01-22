@@ -1,5 +1,6 @@
 
 require 'thor'
+require 'yaml'
 
 module Builder
 

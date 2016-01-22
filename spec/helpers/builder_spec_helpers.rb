@@ -39,22 +39,10 @@ nodes:
 '
 end
 
-def with_one_node
-'
----
-nodes:
-  bare-metal:
-    name: "bare-metal"
-    ssh:
-      from: "none"
-      ip: "172.16.64.10"
-      user: "bare-metal-user"
-      key: "/path/to/private_key"
-'
-end
+def generate_builder_file
+  file_name = "#{Dir::pwd}/builder.yml"
 
-def generate_builder_file(method_name)
-  File.open("#{Dir::pwd}/builder.yml", "w") do |f|
-    f.write send(method_name)
+  File.open(file_name, "w") do |f|
+    f.write with_all
   end
 end
