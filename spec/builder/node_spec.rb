@@ -17,7 +17,7 @@ describe Builder::Nodes do
       allow(Builder::Hypervisors::Kvm).to receive(:provision).with(:dcmgr).and_return(true)
     end
 
-    it "creates a dcmgr node" do
+    it "selects provisioner" do
       expect(Builder::Nodes.provision(:dcmgr)).to eq true
     end
   end
