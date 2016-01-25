@@ -1,6 +1,7 @@
 GEM
   remote: http://rubygems.org/
   specs:
+    archive-tar-minitar (0.5.2)
     coderay (1.1.0)
     diff-lcs (1.2.5)
     fakefs (0.6.7)
@@ -30,6 +31,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  archive-tar-minitar
   fakefs
   net-ssh
   pry
@@ -37,4 +39,4 @@ DEPENDENCIES
   thor
 
 BUNDLED WITH
-   1.10.6
+   1.11.2

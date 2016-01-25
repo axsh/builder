@@ -27,5 +27,33 @@ describe Builder::Hypervisors::Kvm do
       expect(subject).to receive(:system).with(mkdir_cmd)
       subject.send(:create_node_dir, node_dir)
     end
+
+    it "extracs seed image to node's directory" do
+
+      FakeFS.deactivate!
+
+      File.open('test', 'w') do |f|
+        f.puts "fake data"
+      end
+
+      Zlib::GzipWriter.open(config[:seed_image_path], Zlib::BEST_COMPRESSION) do |gz|
+        out = Archive::Tar::Minitar::Output.new(gz)
+        Archive::Tar::Minitar::pack_file('test', out)
+        out.close
+      end
+
+      node_image_dir = "#{config[:builder_root]}/#{name.to_s}"
+      node_image_path = "#{config[:builder_root]}/#{name.to_s}/#{name.to_s}.raw"
+
+      subject.send(:extract_seed_image, node_image_path)
+
+      expect(File.exist?(node_image_path)).to eq true
+
+      File.delete('test')
+      File.delete(config[:seed_image_path])
+      FileUtils.rm_rf(node_image_dir)
+
+      FakeFS.activate!
+    end
   end
 end
