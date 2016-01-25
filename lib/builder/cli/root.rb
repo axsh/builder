@@ -6,7 +6,7 @@ module Builder::Cli
     def initialize(*args)
       super(*args)
       Builder.recipe = YAML.load_file("builder.yml").symbolize_keys
-      Builder.config = YAML.load_file(".builder").symbolize_keys
+      Builder.config = config_loader(YAML.load_file(".builder").symbolize_keys)
     end
 
     desc "init", "init"
@@ -23,6 +23,12 @@ module Builder::Cli
     no_tasks {
       def validate
         Builder.recipe[:validated] = true
+      end
+
+      def config_loader(c)
+        c[:builder_root] ||= "#{File.expand_path("../../../../", __FILE__)}"
+        c[:seed_image_path] ||= "#{c[:builder_root]}/seed"
+        c
       end
     }
   end

@@ -10,16 +10,22 @@ describe Builder::Hypervisors::Kvm do
   subject { Builder::Hypervisors::Kvm }
 
   let(:config) { Builder.config }
+  let(:name) { :dcmgr }
 
   describe "provision" do
 
-    let(:seed_image) { "#{config[:builder_root]}/seed" }
+    let(:node_dir) { "#{config[:builder_root]}/#{name.to_s}" } 
 
     it "downloads seed image" do
-      expect(subject).to receive(:system).with(
-        "curl -L #{config[:seed_image_url]} -o #{seed_image}")
+      curl_cmd  = "curl -L #{config[:seed_image_url]} -o #{config[:seed_image_path]}"
+      expect(subject).to receive(:system).with(curl_cmd)
+      subject.send(:download_seed_image)
+    end
 
-      subject.provision(:dcmgr)
+    it "creates a directory with node's name" do
+      mkdir_cmd = "mkdir -p #{node_dir}"
+      expect(subject).to receive(:system).with(mkdir_cmd)
+      subject.send(:create_node_dir, node_dir)
     end
   end
 end
