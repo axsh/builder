@@ -6,6 +6,7 @@ module Builder::Cli
     def initialize(*args)
       super(*args)
       Builder.recipe = YAML.load_file("builder.yml").symbolize_keys
+      Builder.config = YAML.load_file(".builder").symbolize_keys
     end
 
     desc "init", "init"

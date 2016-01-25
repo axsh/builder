@@ -12,6 +12,14 @@ module Builder
         end
       end
 
+      def provision(name = :all)
+        if name == :all
+          list_to_provision.each {|n| provision(n) }
+        else
+          true
+        end
+      end
+
       private
 
       def nodes

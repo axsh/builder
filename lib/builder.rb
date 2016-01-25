@@ -8,6 +8,7 @@ module Builder
 
   class << self
     attr_accessor :recipe
+    attr_accessor :config
   end
 
   module Cli
