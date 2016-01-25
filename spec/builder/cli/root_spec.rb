@@ -5,6 +5,7 @@ describe Builder::Cli::Root do
 
   before do
     generate_builder_file(:with_all)
+    generate_builder_config(:simple)
   end
 
   subject { Builder::Cli::Root.new }
