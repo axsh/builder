@@ -1,10 +1,10 @@
 require 'spec_helper'
+require 'net/ssh'
 
 describe Builder::Cli::Root do
 
   before do
     generate_builder_file
-    subject.load_conf
   end
 
   subject { Builder::Cli::Root.new }
@@ -20,11 +20,6 @@ describe Builder::Cli::Root do
   describe "load_conf" do
     it "loads builder conf files" do
       expect(Builder.recipe).not_to eq nil
-    end
-  end
-
-  describe "ssh_to" do
-    it "do something" do
     end
   end
 end
