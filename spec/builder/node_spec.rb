@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe Builder::Nodes do
   before do
-    generate_builder_file
+    generate_builder_file(:with_all)
   end
 
   describe "list_to_provision" do
