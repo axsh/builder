@@ -19,5 +19,9 @@ module Builder
     autoload :Kvm, 'builder/hypervisors/kvm'
   end
 
+  module Helpers
+    autoload :Config, 'builder/helpers/config'
+  end
+
   autoload :Nodes, 'builder/nodes'
 end

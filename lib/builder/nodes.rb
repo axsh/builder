@@ -3,6 +3,8 @@ require 'builder'
 module Builder
   class Nodes
     class << self
+      include Builder::Helpers::Config
+
       def list_to_provision
         nodes.inject([]) do |nodes_to_provision, (key, value)|
           if value.include?(:provision)
@@ -19,16 +21,6 @@ module Builder
           hypervisor = Builder::Hypervisors.const_get(node_spec(name)[:type].capitalize)
           hypervisor.provision(name)
         end
-      end
-
-      private
-
-      def nodes
-        Builder.recipe[:nodes]
-      end
-
-      def node_spec(name)
-        nodes[name][:provision][:spec]
       end
     end
   end
