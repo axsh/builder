@@ -15,5 +15,9 @@ module Builder
     autoload :Root, 'builder/cli/root'
   end
 
+  module Hypervisors
+    autoload :Kvm, 'builder/hypervisors/kvm'
+  end
+
   autoload :Nodes, 'builder/nodes'
 end

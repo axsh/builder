@@ -16,7 +16,8 @@ module Builder
         if name == :all
           list_to_provision.each {|n| provision(n) }
         else
-          true
+          hypervisor = Builder::Hypervisors.const_get(node_spec(name)[:type].capitalize)
+          hypervisor.provision(name)
         end
       end
 
@@ -24,6 +25,10 @@ module Builder
 
       def nodes
         Builder.recipe[:nodes]
+      end
+
+      def node_spec(name)
+        nodes[name][:provision][:spec]
       end
     end
   end

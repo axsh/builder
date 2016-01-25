@@ -10,4 +10,15 @@ describe Builder::Nodes do
       expect(Builder::Nodes.list_to_provision).to eq [:dcmgr]
     end
   end
+
+  describe "provision" do
+
+    before do
+      allow(Builder::Hypervisors::Kvm).to receive(:provision).with(:dcmgr).and_return(true)
+    end
+
+    it "creates a dcmgr node" do
+      expect(Builder::Nodes.provision(:dcmgr)).to eq true
+    end
+  end
 end
