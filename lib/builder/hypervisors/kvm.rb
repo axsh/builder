@@ -17,6 +17,8 @@ module Builder::Hypervisors
         create_node_dir(node_dir)
         extract_seed_image(node_image_path)
         expand_disk_size(node_image_path)
+        create_nics(nics, node_dir, node_image_path)
+        create_runscript(name, node_dir, node_spec(name))
       end
 
       private
@@ -58,6 +60,39 @@ module Builder::Hypervisors
         nics.keys.each do |nic|
           File.open("#{mnt}/etc/sysconfig/network-scripts/ifcfg-#{nic}", "w") do |f|
           end
+        end
+      end
+
+      def create_runscript(name, node_dir, spec)
+        qemu_kvm = if File.exist?("/usr/libexec/qemu-kvm")
+                     "/usr/libexec/qemu-kvm"
+                   elsif File.exist?("/usr/bin/qemu-kvm")
+                     "/usr/bin/qemu-kvm"
+                   else
+                     nil
+                   end
+
+        return if qemu_kvm.nil?
+
+        port = Random.rand(10..99)
+
+        File.open("#{node_dir}/run.sh", "w") do |f|
+          f.puts "#!/bin/bash"
+          f.puts "#{qemu_kvm} -name #{name} -cpu qemu64,+vmx,+svm -memory #{spec[:memory]} \\"
+          f.puts "-smp 1 -vnc 127.0.0.1:110#{port} -k en-us -rtc base=utc \\"
+          f.puts "-monitor telnet:127.0.0.1:140#{port},server,nowait \\"
+          f.puts "-serial telnet:127.0.0.1:150#{port},server,nowait \\"
+          f.puts "-serial file:console.log \\"
+          f.puts "-drive file=./#{name}.raw,media=disk,boot=on,index=0,cache=none,if=virtio \\"
+
+          i = 0
+          spec[:nics].keys.each do |eth|
+            f.puts "-netdev tap,ifname=#{name}-#{i},id=hostnet#{i},script=,downscript= \\"
+            f.puts "-device virtio-net-pci,netdev=hostnet#{i},mac=#{spec[:nics][key][:mac_address]},bus=pci.0,addr=0x#{i+3} \\"
+            i = i + 1
+          end
+
+          f.puts "-pidfile kvm.pid -daemonize -enable-kvm"
         end
       end
     end

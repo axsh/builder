@@ -57,8 +57,10 @@ nodes:
             defroute: true
             ip: "192.168.100.2"
             prefix: 24
+            mac_address: "52:54:00:00:00:01"
           eth1:
             bootproto: "none"
+            mac_address: "52:54:00:00:00:02"
       provisioner: "shell"
       data:
         - "script1"
