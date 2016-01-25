@@ -57,10 +57,20 @@ module Builder::Hypervisors
 
         system("mount -o loop,offset=32256 #{node_image_path} #{mnt}")
 
-        nics.keys.each do |nic|
-          File.open("#{mnt}/etc/sysconfig/network-scripts/ifcfg-#{nic}", "w") do |f|
+        nics.keys.each do |eth|
+          File.open("#{mnt}/etc/sysconfig/network-scripts/ifcfg-#{eth}", "w") do |f|
+            f.puts "DEVICE=#{eth}"
+            f.puts "TYPE=Ethernet"
+            f.puts "ONBOOT=yes"
+            f.puts "BOOTPROTO=#{nics[eth][:bootproto]}"
+            f.puts "IPADDR=#{nics[eth][:ip]}" if nics[eth][:ip]
+            f.puts "PREFIX=#{nics[eth][:prefix]}" if nics[eth][:prefix]
+
+            f.puts "DEFROUTE=#{nics[eth][:defroute]}" if nics[eth][:defroute]
           end
         end
+
+        system("umount #{mnt}")
       end
 
       def create_runscript(name, node_dir, spec)

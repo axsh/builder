@@ -67,9 +67,11 @@ describe Builder::Hypervisors::Kvm do
 
       mkdir_cmd = "mkdir -p #{node_dir}/mnt"
       mount_cmd = "mount -o loop,offset=32256 #{node_image_path} #{node_dir}/mnt"
+      umount_cmd= "umount #{node_dir}/mnt"
 
       allow(subject).to receive(:system).with(mkdir_cmd)
       allow(subject).to receive(:system).with(mount_cmd)
+      allow(subject).to receive(:system).with(umount_cmd)
 
       expect{
         subject.send(:create_nics, nics, node_dir, node_image_path)
