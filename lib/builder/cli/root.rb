@@ -2,6 +2,12 @@ require 'yaml'
 
 module Builder::Cli
   class Root < Thor
+
+    def initialize(*args)
+      super(*args)
+      Builder.recipe = YAML.load_file("builder.yml").symbolize_keys
+    end
+
     desc "init", "init"
     def init
       [".builder", "builder.yml"].each do |file|
@@ -15,11 +21,7 @@ module Builder::Cli
 
     no_tasks {
       def validate
-        Builder.recipe['validated'] = true
-      end
-
-      def load_conf
-        Builder.recipe = YAML.load_file("builder.yml")
+        Builder.recipe[:validated] = true
       end
     }
   end
