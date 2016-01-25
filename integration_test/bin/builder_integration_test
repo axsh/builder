@@ -2,4 +2,28 @@
 
 $LOAD_PATH.unshift File.expand_path("../../../lib", __FILE__)
 
+spec_dir = File.expand_path("../../spec", __FILE__)
 
+list = Dir.entries(spec_dir).select {|f|
+         f =~ /_spec\.rb/
+       }.map {|f|
+         f.gsub(/_spec\.rb/, "")
+       }
+
+to_exec = if ARGV[0].nil?
+            list
+          else
+            list.select {|s| s == ARGV[0] }
+          end
+
+if to_exec.empty?
+  puts "[ERROR]: invalid arguments"
+  exit 1
+end
+
+to_exec.each do |f|
+  puts "---------------"
+  puts "spec : #{f}"
+  puts "---------------"
+  system("bundle exec rspec #{File.expand_path("#{spec_dir}/#{f}_spec.rb", __FILE__)}")
+end
