@@ -2,6 +2,8 @@
 require 'thor'
 require 'yaml'
 
+require_relative 'ext/hash'
+
 module Builder
 
   class << self
