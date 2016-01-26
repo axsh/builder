@@ -93,7 +93,7 @@ module Builder::Hypervisors
 
         nics.keys.each do |eth|
           tmp_path = "#{node_dir}/ifcfg-#{eth}"
-          nic_path = "#{mnt}/etc/sysconfig/network-scripts/ifcfg-#{eth}"
+          nic_path = "#{mnt}/etc/sysconfig/network-scripts"
 
           File.open(tmp_path, "w") do |f|
             f.puts "DEVICE=#{eth}"
@@ -106,9 +106,11 @@ module Builder::Hypervisors
             f.puts "DEFROUTE=#{nics[eth][:defroute]}" if nics[eth][:defroute]
           end
 
-          system("#{sudo} mv #{tmp_path} #{nic_path}")
-
-          info "nic created : #{nic_path}"
+          if system("#{sudo} mv #{tmp_path} #{nic_path}")
+            info "nic created : #{nic_path}/ifcfg-#{eth}"
+          else
+            error "mv failed : #{tmp_path}"
+          end
         end
 
         system("umount #{mnt}")

@@ -8,12 +8,16 @@ describe "super_simple" do
     Builder::Cli::Root.new
   end
 
+  after(:all) do
+    FileUtils.rm_rf(Builder.config[:builder_root])
+  end
+
   let(:name) { :dcmgr }
   let(:config) { Builder.config }
 
   it "creates one dcmgr node" do
-    Builder::Nodes.provision(name)
-
-    expect(File.exist?("#{config[:builder_root]}/#{name.to_s}/#{name.to_s}.raw")).to eq true
+    expect {
+      Builder::Nodes.provision(name)
+    }.not_to raise_error
   end
 end
