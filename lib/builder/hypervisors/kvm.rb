@@ -136,7 +136,7 @@ module Builder::Hypervisors
           i = 0
           spec[:nics].keys.each do |eth|
             f.puts "-netdev tap,ifname=#{name}-#{i},id=hostnet#{i},script=,downscript= \\"
-            f.puts "-device virtio-net-pci,netdev=hostnet#{i},mac=#{spec[:nics][key][:mac_address]},bus=pci.0,addr=0x#{i+3} \\"
+            f.puts "-device virtio-net-pci,netdev=hostnet#{i},mac=#{spec[:nics][eth][:mac_address]},bus=pci.0,addr=0x#{i+3} \\"
             i = i + 1
           end
 
