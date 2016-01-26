@@ -5,10 +5,8 @@ describe "super_simple" do
   before(:all) do
     generate_builder_file(:with_one_dcmgr)
     generate_builder_config(:simple)
+    Builder::Cli::Root.new
   end
-
-  let(:builder) { Builder::Cli::Root.new }
-  let(:dcmgr_node) { Builder::Nodes[:dcmgr] }
 
   it "creates one dcmgr node" do
     Builder::Nodes.provision(:dcmgr)
