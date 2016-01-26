@@ -36,21 +36,21 @@ describe Builder::Hypervisors::Kvm do
 
       FakeFS.deactivate!
 
-      File.open('test', 'w') do |f|
+      File.open('test.raw', 'w') do |f|
         f.puts "fake data"
       end
 
       Zlib::GzipWriter.open(config[:seed_image_path], Zlib::BEST_COMPRESSION) do |gz|
         out = Archive::Tar::Minitar::Output.new(gz)
-        Archive::Tar::Minitar::pack_file('test', out)
+        Archive::Tar::Minitar::pack_file('test.raw', out)
         out.close
       end
 
-      subject.send(:extract_seed_image, node_image_path)
+      subject.send(:extract_seed_image, node_dir, node_image_path)
 
       expect(File.exist?(node_image_path)).to eq true
 
-      File.delete('test')
+      File.delete('test.raw')
       File.delete(config[:seed_image_path])
       FileUtils.rm_rf(node_dir)
 

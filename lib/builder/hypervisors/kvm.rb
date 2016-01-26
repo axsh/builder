@@ -7,16 +7,18 @@ module Builder::Hypervisors
   class Kvm
     class << self
       include Builder::Helpers::Config
+      include Builder::Helpers::Logger
 
       def provision(name)
         node_dir = "#{config[:builder_root]}/#{name.to_s}"
         node_image_path = "#{node_dir}/#{name.to_s}.raw"
         nics = node_spec(name)[:nics]
+        disk_size = node_spec(name)[:disk]
 
         download_seed_image
         create_node_dir(node_dir)
-        extract_seed_image(node_image_path)
-        expand_disk_size(node_image_path)
+        extract_seed_image(node_dir, node_image_path)
+        expand_disk_size(node_image_path, disk_size)
         create_nics(nics, node_dir, node_image_path)
         create_runscript(name, node_dir, node_spec(name))
       end
@@ -24,41 +26,71 @@ module Builder::Hypervisors
       private
 
       def download_seed_image
-        if not File.exist?(config[:seed_image_path])
+
+        info "download_seed_image"
+
+        if File.exist?(config[:seed_image_path])
+          info "skip seed image download. already existed"
+        else
           system("curl -L #{config[:seed_image_url]} -o #{config[:seed_image_path]}")
+          info "seed image downloaded : #{config[:seed_image_path]}"
         end
       end
 
       def create_node_dir(node_dir)
+
+        info "create node dir"
+
         if not Dir.exist?(node_dir)
           system("mkdir -p #{node_dir}")
+          info "directory created : #{node_dir}"
+        else
+          info "directory already existed : #{node_dir}"
         end
       end
 
-      def extract_seed_image(node_image_path)
+      def extract_seed_image(node_dir, node_image_path)
+        info "extract seed image"
+
         Zlib::GzipReader.open(config[:seed_image_path]) do |gz|
-          Archive::Tar::Minitar::unpack(gz, node_image_path)
+          Archive::Tar::Minitar::unpack(gz, node_dir)
         end
+
+        raw_file = Dir.entries(node_dir).select {|f| /\.raw/ =~ f }.first
+        system("mv #{node_dir}/#{raw_file} #{node_image_path}")
+
+        info "seed image extracted to : #{node_image_path}"
       end
 
       def expand_disk_size(node_image_path, disk_size)
+        info "expand disk size"
+
         system("qemu-img resize #{node_image_path} +#{disk_size}")
+
+        info "image resized upto #{disk_size}"
 
         system("parted --script -- #{node_image_path} rm 2")
         system("parted --script -- #{node_image_path} rm 1")
         system("parted --script -- #{node_image_path} mkpart primary ext4 63s 100%")
+
+        info "created new partitions"
       end
 
       def create_nics(nics, node_dir, node_image_path)
+        info "create nics"
+
         mnt = "#{node_dir}/mnt"
         if not Dir.exist?(mnt)
           system("mkdir -p #{mnt}")
         end
 
         system("mount -o loop,offset=32256 #{node_image_path} #{mnt}")
+        info "mount image"
 
         nics.keys.each do |eth|
-          File.open("#{mnt}/etc/sysconfig/network-scripts/ifcfg-#{eth}", "w") do |f|
+          nic_path = "#{mnt}/etc/sysconfig/network-scripts/ifcfg-#{eth}"
+
+          File.open(nic_path, "w") do |f|
             f.puts "DEVICE=#{eth}"
             f.puts "TYPE=Ethernet"
             f.puts "ONBOOT=yes"
@@ -68,12 +100,17 @@ module Builder::Hypervisors
 
             f.puts "DEFROUTE=#{nics[eth][:defroute]}" if nics[eth][:defroute]
           end
+
+          info "nic created : #{nic_path}"
         end
 
         system("umount #{mnt}")
+        info "umount image"
       end
 
       def create_runscript(name, node_dir, spec)
+        info "create runscript"
+
         qemu_kvm = if File.exist?("/usr/libexec/qemu-kvm")
                      "/usr/libexec/qemu-kvm"
                    elsif File.exist?("/usr/bin/qemu-kvm")
@@ -81,6 +118,7 @@ module Builder::Hypervisors
                    else
                      nil
                    end
+        info "qemu found in : #{qemu_kvm}"
 
         return if qemu_kvm.nil?
 
@@ -104,6 +142,7 @@ module Builder::Hypervisors
 
           f.puts "-pidfile kvm.pid -daemonize -enable-kvm"
         end
+        info "runscript created"
       end
     end
   end
