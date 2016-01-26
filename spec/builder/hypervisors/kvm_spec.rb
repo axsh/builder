@@ -40,6 +40,7 @@ describe Builder::Hypervisors::Kvm do
         f.puts "fake data"
       end
 
+      FileUtils.mkdir_p(config[:builder_root])
       Zlib::GzipWriter.open(config[:seed_image_path], Zlib::BEST_COMPRESSION) do |gz|
         out = Archive::Tar::Minitar::Output.new(gz)
         Archive::Tar::Minitar::pack_file('test.raw', out)
@@ -53,6 +54,7 @@ describe Builder::Hypervisors::Kvm do
       File.delete('test.raw')
       File.delete(config[:seed_image_path])
       FileUtils.rm_rf(node_dir)
+      FileUtils.rm_rf(config[:builder_root])
 
       FakeFS.activate!
     end
