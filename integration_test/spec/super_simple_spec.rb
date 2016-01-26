@@ -8,9 +8,9 @@ describe "super_simple" do
     Builder::Cli::Root.new
   end
 
-  after do
-    FileUtils.rm_rf(config[:builder_root])
-  end
+  # after do
+  #   FileUtils.rm_rf(config[:builder_root])
+  # end
 
   let(:name) { :dcmgr }
   let(:config) { Builder.config }
