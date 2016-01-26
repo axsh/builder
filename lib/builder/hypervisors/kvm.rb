@@ -25,6 +25,10 @@ module Builder::Hypervisors
 
       private
 
+      def sudo
+        `whoami` == 'root' ? 'sudo' : ''
+      end
+
       def download_seed_image
 
         info "download_seed_image"
@@ -84,13 +88,14 @@ module Builder::Hypervisors
           system("mkdir -p #{mnt}")
         end
 
-        system("mount -o loop,offset=32256 #{node_image_path} #{mnt}")
+        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
         info "mount image"
 
         nics.keys.each do |eth|
+          tmp_path = "#{node_dir}/ifcfg-#{eth}"
           nic_path = "#{mnt}/etc/sysconfig/network-scripts/ifcfg-#{eth}"
 
-          File.open(nic_path, "w") do |f|
+          File.open(tmp_path, "w") do |f|
             f.puts "DEVICE=#{eth}"
             f.puts "TYPE=Ethernet"
             f.puts "ONBOOT=yes"
@@ -100,6 +105,8 @@ module Builder::Hypervisors
 
             f.puts "DEFROUTE=#{nics[eth][:defroute]}" if nics[eth][:defroute]
           end
+
+          system("#{sudo} mv #{tmp_path} #{nic_path}")
 
           info "nic created : #{nic_path}"
         end

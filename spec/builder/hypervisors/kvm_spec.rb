@@ -62,17 +62,19 @@ describe Builder::Hypervisors::Kvm do
     it "creates ifcfg-xxx files according to node's spec" do
       nics = nodes[:dcmgr][:provision][:spec][:nics]
 
-      nics.keys.each do |nic|
-        allow(File).to receive(:open)
-          .with("#{node_dir}/mnt/etc/sysconfig/network-scripts/ifcfg-#{nic}", "w")
-      end
-
       mkdir_cmd = "mkdir -p #{node_dir}/mnt"
       mount_cmd = "mount -o loop,offset=32256 #{node_image_path} #{node_dir}/mnt"
       umount_cmd= "umount #{node_dir}/mnt"
 
       allow(subject).to receive(:system).with(mkdir_cmd)
-      allow(subject).to receive(:system).with(mount_cmd)
+      allow(subject).to receive(:system).with(/#{mount_cmd}/)
+
+      nics.keys.each do |nic|
+        allow(File).to receive(:open)
+          .with("#{node_dir}/ifcfg-#{nic}", "w")
+        allow(subject).to receive(:system).with(/mv/)
+      end
+
       allow(subject).to receive(:system).with(umount_cmd)
 
       expect{
