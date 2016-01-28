@@ -27,6 +27,7 @@ module Builder
   end
 
   autoload :Nodes, 'builder/nodes'
+  autoload :Networks, 'builder/networks'
 end
 
 Builder.logger ||= ::Logger.new(STDOUT)
