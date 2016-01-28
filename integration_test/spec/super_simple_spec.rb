@@ -9,7 +9,7 @@ describe "super_simple" do
   end
 
   after(:all) do
-    FileUtils.rm_rf(Builder.config[:builder_root])
+    FileUtils.rm_rf("#{Builder.config[:builder_root]}/dcmgr")
   end
 
   let(:name) { :dcmgr }

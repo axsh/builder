@@ -20,43 +20,34 @@ describe Builder::Hypervisors::Kvm do
     let(:node_image_path) { "#{node_dir}/#{name.to_s}.raw" }
     let(:nics) { nodes[:dcmgr][:provision][:spec][:nics] }
 
-    it "downloads seed image" do
-      curl_cmd  = "curl -L #{config[:seed_image_url]} -o #{config[:seed_image_path]}"
-      expect(subject).to receive(:system).with(curl_cmd)
-      subject.send(:download_seed_image)
-    end
-
     it "creates a directory with node's name" do
       mkdir_cmd = "mkdir -p #{node_dir}"
       expect(subject).to receive(:system).with(mkdir_cmd)
       subject.send(:create_node_dir, node_dir)
     end
 
+    it "downloads seed image" do
+      curl_cmd = "curl -L #{config[:seed_image_url]} -o #{config[:seed_image_path]}"
+      allow(subject).to receive(:system).with(curl_cmd).and_return(true)
+      subject.send(:download_seed_image)
+    end
+
     it "extracs seed image to node's directory" do
 
-      FakeFS.deactivate!
+      zlib_mock = double('zlib')
 
-      File.open('test.raw', 'w') do |f|
-        f.puts "fake data"
-      end
+      allow(Zlib::GzipReader).to receive(:open).with(config[:seed_image_path]).and_return(zlib_mock)
+      allow(Archive::Tar::Minitar).to receive(:unpack).with(zlib_mock, node_dir).and_return(true)
 
-      FileUtils.mkdir_p(config[:builder_root])
-      Zlib::GzipWriter.open(config[:seed_image_path], Zlib::BEST_COMPRESSION) do |gz|
-        out = Archive::Tar::Minitar::Output.new(gz)
-        Archive::Tar::Minitar::pack_file('test.raw', out)
-        out.close
-      end
+      raw_file_mock = double('raw_file')
+      allow(raw_file_mock).to receive(:select).with(no_args).and_return(['dcmgr.raw'])
+      allow(Dir).to receive(:entries).with(anything).and_return(raw_file_mock)
 
-      subject.send(:extract_seed_image, node_dir, node_image_path)
+      allow(subject).to receive(:system).with(anything).and_return(true)
 
-      expect(File.exist?(node_image_path)).to eq true
-
-      File.delete('test.raw')
-      File.delete(config[:seed_image_path])
-      FileUtils.rm_rf(node_dir)
-      FileUtils.rm_rf(config[:builder_root])
-
-      FakeFS.activate!
+      expect {
+        subject.send(:extract_seed_image, node_dir, node_image_path)
+      }.not_to raise_error
     end
 
     it "creates ifcfg-xxx files according to node's spec" do

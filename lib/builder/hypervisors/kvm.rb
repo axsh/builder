@@ -15,8 +15,8 @@ module Builder::Hypervisors
         nics = node_spec(name)[:nics]
         disk_size = node_spec(name)[:disk]
 
-        download_seed_image
         create_node_dir(node_dir)
+        download_seed_image
         extract_seed_image(node_dir, node_image_path)
         expand_disk_size(node_image_path, disk_size)
         create_nics(nics, node_dir, node_image_path)
@@ -26,7 +26,7 @@ module Builder::Hypervisors
       private
 
       def sudo
-        `whoami` == 'root' ? 'sudo' : ''
+        `whoami` =~ /root/ ? 'sudo' : ''
       end
 
       def download_seed_image
