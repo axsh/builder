@@ -15,7 +15,7 @@ describe "with_network" do
       system("#{sudo} #{cmd} #{v[:bridge_name]}")
     end
 
-    system("kill -9 `cat #{Builder.config[:builder_root]}/dcmgr/kvm.pid`")
+    system("#{sudo} kill -9 `#{sudo} cat #{Builder.config[:builder_root]}/dcmgr/kvm.pid`")
 
     FileUtils.rm_rf("#{Builder.config[:builder_root]}/dcmgr")
   end
