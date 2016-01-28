@@ -3,8 +3,8 @@ require_relative 'spec_helper'
 describe "super_simple" do
 
   before(:all) do
-    generate_builder_file(:with_one_dcmgr)
-    generate_builder_config(:simple)
+    generate_builder_file(:with_one_dcmgr, false)
+    generate_builder_config(:simple, false)
     Builder::Cli::Root.new
   end
 
