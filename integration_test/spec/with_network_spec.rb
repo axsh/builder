@@ -8,9 +8,10 @@ describe "with_network" do
   end
 
   after(:all) do
+    sudo = `whoami` =~ /root/ ? '' : 'sudo'
+
     Builder.recipe[:networks].each do |k, v|
       cmd = v[:bridge_type] == 'ovs' ? 'ovs-vsctl del-br' : 'brctl delbr'
-      sudo = `whoami` =~ /root/ ? '' : 'sudo'
       system("#{sudo} ip link set #{v[:bridge_name]} down")
       system("#{sudo} #{cmd} #{v[:bridge_name]}")
     end
