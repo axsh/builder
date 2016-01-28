@@ -18,7 +18,8 @@ module Builder::Cli
     end
 
     desc "exec", "exec"
-    def exec
+    def exec(name = :all)
+      Builder::Nodes.provision(name)
     end
 
     no_tasks {

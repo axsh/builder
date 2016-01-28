@@ -10,6 +10,8 @@ module Builder::Hypervisors
       include Builder::Helpers::Logger
 
       def provision(name)
+        Builder::Networks.provision
+
         node_dir = "#{config[:builder_root]}/#{name.to_s}"
         node_image_path = "#{node_dir}/#{name.to_s}.raw"
         nics = node_spec(name)[:nics]

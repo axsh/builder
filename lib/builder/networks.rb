@@ -11,15 +11,20 @@ module Builder
           networks.keys.each {|n| provision(n) }
         else
           network = network_spec(name)
-          cmd = send("#{network[:bridge_type].to_s}_addbr")
-          system("#{sudo} #{cmd} #{network[:bridge_name]}")
-          system("#{sudo} ip link set #{network[:bridge_name]} up")
 
-          if network[:ipv4_gateway]
-            system("#{sudo} ip addr add #{network[:ipv4_gateway]}/#{network[:prefix]} dev #{network[:bridge_name]}")
+          if system("ip link show #{network[:bridge_type]}")
+            info "#{network[:bridge_type]} already exists. skip creation"
+          else
+            cmd = send("#{network[:bridge_type].to_s}_addbr")
+            system("#{sudo} #{cmd} #{network[:bridge_name]}")
+            system("#{sudo} ip link set #{network[:bridge_name]} up")
+
+            if network[:ipv4_gateway]
+              system("#{sudo} ip addr add #{network[:ipv4_gateway]}/#{network[:prefix]} dev #{network[:bridge_name]}")
+            end
+
+            info "bridge #{network[:bridge_name]} created"
           end
-
-          info "bridge #{network[:bridge_name]} created"
         end
       end
 

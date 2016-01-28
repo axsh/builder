@@ -4,7 +4,6 @@ describe "with_network" do
   before(:all) do
     generate_builder_file(:with_one_network, false)
     generate_builder_config(:simple, false)
-    Builder::Cli::Root.new
   end
 
   after(:all) do
@@ -21,6 +20,8 @@ describe "with_network" do
     FileUtils.rm_rf("#{Builder.config[:builder_root]}/dcmgr")
   end
 
+  subject { Builder::Cli::Root.new }
+
   let(:name) { :dcmgr }
   let(:config) { Builder.config }
 
@@ -28,8 +29,7 @@ describe "with_network" do
   let(:networks) { Builder.recipe[:networks] }
 
   it "creates one dcmgr node" do
-    Builder::Networks.provision
-    Builder::Nodes.provision(name)
+    subject.invoke(:exec)
 
     networks.each do |k, v|
       cmd = v[:bridge_type] == 'ovs' ? 'ovs-vsctl' : 'brctl'
