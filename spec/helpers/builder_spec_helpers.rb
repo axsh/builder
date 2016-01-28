@@ -1,81 +1,20 @@
-
-def with_all
-'
----
-nodes:
-  bare-metal:
-    name: "bare-metal"
-    ssh:
-      from: "none"
-      ip: "172.16.64.10"
-      user: "bare-metal-user"
-      key: "/path/to/private_key"
-
-  dcmgr:
-    name: "dcmgr"
-    provision: 
-      spec:
-        type: "kvm"
-        os: "centos6.7"
-        disk: 30
-        memory: 4000
-        nics:
-          eth0:
-            bootproto: "static"
-            defroute: true
-            ip: "192.168.100.2"
-            prefix: 24
-          eth1:
-            bootproto: "none"
-      provisioner: "shell"
-      data:
-        - "script1"
-        - "script2"
-    ssh:
-      from: "bare-metal"
-      ip: "192.168.100.2"
-      user: "root"
-      key: "/path/to/private_key"
-'
-end
-
-def with_one_dcmgr
-'
----
-nodes:
-  dcmgr:
-    name: "dcmgr"
-    provision: 
-      spec:
-        type: "kvm"
-        os: "centos6.7"
-        disk: 30
-        memory: 4000
-        nics:
-          eth0:
-            bootproto: "static"
-            defroute: true
-            ip: "192.168.100.2"
-            prefix: 24
-            mac_address: "52:54:00:00:00:01"
-          eth1:
-            bootproto: "none"
-            mac_address: "52:54:00:00:00:02"
-      provisioner: "shell"
-      data:
-        - "script1"
-        - "script2"
-    ssh:
-      ip: "192.168.100.2"
-      user: "root"
-      key: "/path/to/private_key"
-'
-end
-
 def generate_builder_file(name)
   file_name = "#{Dir::pwd}/builder.yml"
 
+  FakeFS.deactivate!
+
+  path = File.expand_path("../../sample_builder_yml/#{name.to_s}.yml", __FILE__)
+
+  begin
+    sample_yml = File.read(path)
+  rescue => e
+    Builder.logger.error e.message
+    Builder.logger.error e.class
+  end
+
+  FakeFS.activate!
+
   File.open(file_name, "w") do |f|
-    f.write send(name)
+    f.write sample_yml
   end
 end
