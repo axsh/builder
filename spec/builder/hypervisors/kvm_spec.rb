@@ -85,6 +85,24 @@ describe Builder::Hypervisors::Kvm do
         subject.send(:create_runscript, name, node_dir, node_spec)
       }.not_to raise_error
     end
+
+    it "creates authorized_keys file" do
+
+      allow(File).to receive(:read).with(anything).and_return(true)
+      allow(Dir).to receive(:exist)
+
+      key_mock = double(:key)
+      allow(key_mock).to receive(:ssh_public_key).and_return("ssh_public_key")
+      allow(SSHKey).to receive(:new).and_return(key_mock)
+
+      file_mock = double(:file)
+      allow(file_mock).to receive(:puts).with("ssh_public_key")
+      allow(File).to receive(:open).with(any_args).and_return(file_mock)
+
+      expect {
+        subject.send(:install_ssh_key, nodes[name][:ssh][:key], node_dir, node_image_path)
+      }.not_to raise_error
+    end
   end
 
   describe "launch" do

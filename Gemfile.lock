@@ -25,6 +25,7 @@ GEM
       rspec-support (~> 3.4.0)
     rspec-support (3.4.1)
     slop (3.6.0)
+    sshkey (1.8.0)
     thor (0.19.1)
 
 PLATFORMS
@@ -36,6 +37,7 @@ DEPENDENCIES
   net-ssh
   pry
   rspec
+  sshkey
   thor
 
 BUNDLED WITH

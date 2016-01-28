@@ -2,6 +2,7 @@ require 'builder'
 
 require 'zlib'
 require 'archive/tar/minitar'
+require 'sshkey'
 
 module Builder::Hypervisors
   class Kvm
@@ -22,6 +23,7 @@ module Builder::Hypervisors
         extract_seed_image(node_dir, node_image_path)
         expand_disk_size(node_image_path, disk_size)
         create_nics(nics, node_dir, node_image_path)
+        install_ssh_key(nodes[name][:ssh][:key], node_dir, node_image_path)
         create_runscript(name, node_dir, node_spec(name))
 
         launch(name)
@@ -120,6 +122,25 @@ module Builder::Hypervisors
           else
             error "mv failed : #{tmp_path}"
           end
+        end
+
+        system("#{sudo} umount #{mnt}")
+        info "umount image"
+      end
+
+      def install_ssh_key(ssh_private_key_path, node_dir, node_image_path)
+        mnt = "#{node_dir}/mnt"
+        if not Dir.exist?(mnt)
+          system("mkdir -p #{mnt}")
+        end
+
+        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
+        info "mount image"
+
+        key = SSHKey.new(File.read(ssh_private_key_path))
+        FileUtils.mkdir_p("#{mnt}/root/.ssh") if not Dir.exist?("#{mnt}/root/.ssh")
+        File.open("#{mnt}/root/.ssh/authorized_keys", "w") do |f|
+          f.puts key.ssh_public_key
         end
 
         system("#{sudo} umount #{mnt}")
