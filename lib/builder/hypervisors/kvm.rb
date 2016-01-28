@@ -29,7 +29,7 @@ module Builder::Hypervisors
 
       def launch(name)
         info "launch #{name}"
-        system("cd #{config[:builder_root]}/#{name.to_s}; ./run.sh")
+        system("cd #{config[:builder_root]}/#{name.to_s}; #{sudo} ./run.sh")
       end
 
       def sudo
