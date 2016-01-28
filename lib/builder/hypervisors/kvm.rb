@@ -23,6 +23,11 @@ module Builder::Hypervisors
         create_runscript(name, node_dir, node_spec(name))
       end
 
+      def launch(name)
+        info "launch #{name}"
+        system("#{config[:builder_root]}/#{name.to_s}/run.sh")
+      end
+
       private
 
       def sudo
@@ -165,6 +170,8 @@ module Builder::Hypervisors
           end
         end
         info "runscript created"
+
+        system("#{sudo} chmod +x #{node_dir}/run.sh")
       end
     end
   end

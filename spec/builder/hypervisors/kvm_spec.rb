@@ -79,8 +79,20 @@ describe Builder::Hypervisors::Kvm do
       expect(File).to receive(:open).at_least(:once)
         .with("#{node_dir}/run.sh", "w")
 
+      expect(subject).to receive(:system).with(/chmod/).and_return(true)
+
       expect {
         subject.send(:create_runscript, name, node_dir, node_spec)
+      }.not_to raise_error
+    end
+  end
+
+  describe "launch" do
+    it "launches kvm" do
+      allow(subject).to receive(:system).with(/run\.sh/).and_return(true)
+
+      expect {
+        subject.launch(name)
       }.not_to raise_error
     end
   end
