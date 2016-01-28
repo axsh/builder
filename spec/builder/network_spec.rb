@@ -14,7 +14,7 @@ describe Builder::Networks do
     it "creates and configures bridges as written in builder.yml" do
 
       allow(subject).to receive(:system).with(/add/).and_return(true)
-      allow(subject).to receive(:system).with(/ifup/).and_return(true)
+      allow(subject).to receive(:system).with(/ip/).and_return(true)
 
       expect {
         subject.provision(:local)
