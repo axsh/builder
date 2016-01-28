@@ -66,7 +66,7 @@ describe Builder::Hypervisors::Kvm do
         allow(subject).to receive(:system).with(/mv/)
       end
 
-      allow(subject).to receive(:system).with(umount_cmd)
+      allow(subject).to receive(:system).with(/#{umount_cmd}/)
 
       expect{
         subject.send(:create_nics, nics, node_dir, node_image_path)

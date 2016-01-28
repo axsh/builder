@@ -26,7 +26,7 @@ module Builder::Hypervisors
       private
 
       def sudo
-        `whoami` =~ /root/ ? 'sudo' : ''
+        `whoami` =~ /root/ ? '' : 'sudo'
       end
 
       def download_seed_image
@@ -113,7 +113,7 @@ module Builder::Hypervisors
           end
         end
 
-        system("umount #{mnt}")
+        system("#{sudo} umount #{mnt}")
         info "umount image"
       end
 
