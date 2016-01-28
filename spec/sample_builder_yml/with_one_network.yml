@@ -9,6 +9,7 @@ networks:
     bridge_type: "linux"
     bridge_name: "brmanage"
     ipv4_network: "172.16.0.0"
+    ipv4_gateway: "172.16.0.1"
     prefix: 24
 
 nodes:

@@ -92,7 +92,7 @@ describe Builder::Hypervisors::Kvm do
       allow(subject).to receive(:system).with(/run\.sh/).and_return(true)
 
       expect {
-        subject.launch(name)
+        subject.send(:launch, name)
       }.not_to raise_error
     end
   end

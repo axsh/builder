@@ -15,6 +15,10 @@ module Builder
           system("#{sudo} #{cmd} #{network[:bridge_name]}")
           system("#{sudo} ip link set #{network[:bridge_name]} up")
 
+          if network[:ipv4_gateway]
+            system("#{sudo} ip addr add #{network[:ipv4_gateway]}/#{network[:prefix]} dev #{network[:bridge_name]}")
+          end
+
           info "bridge #{network[:bridge_name]} created"
         end
       end

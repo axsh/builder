@@ -10,14 +10,24 @@ describe Builder::Networks do
 
   subject { Builder::Networks }
 
+  let(:networks) { Builder.recipe[:networks] }
+
   describe "provision" do
     it "creates and configures bridges as written in builder.yml" do
 
-      allow(subject).to receive(:system).with(/add/).and_return(true)
-      allow(subject).to receive(:system).with(/ip/).and_return(true)
+      networks.each do |k, v|
+        allow(subject).to receive(:system).with(/add/).and_return(true)
+        allow(subject).to receive(:system).with(/ip/).and_return(true)
+
+        if v[:ipv4_gateway]
+          allow(subject).to receive(:system)
+            .with(/ip addr add #{v[:ipv4_gateway]}\/#{v[:prefix]} dev #{v[:bridge_name]}/)
+            .and_return(true)
+        end
+      end
 
       expect {
-        subject.provision(:local)
+        subject.provision
       }.not_to raise_error
     end
   end

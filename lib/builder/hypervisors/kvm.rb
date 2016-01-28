@@ -21,14 +21,16 @@ module Builder::Hypervisors
         expand_disk_size(node_image_path, disk_size)
         create_nics(nics, node_dir, node_image_path)
         create_runscript(name, node_dir, node_spec(name))
-      end
 
-      def launch(name)
-        info "launch #{name}"
-        system("#{config[:builder_root]}/#{name.to_s}/run.sh")
+        launch(name)
       end
 
       private
+
+      def launch(name)
+        info "launch #{name}"
+        system("cd #{config[:builder_root]}/#{name.to_s}; ./run.sh")
+      end
 
       def sudo
         `whoami` =~ /root/ ? '' : 'sudo'
@@ -140,7 +142,7 @@ module Builder::Hypervisors
 
         File.open("#{node_dir}/run.sh", "w") do |f|
           f.puts "#!/bin/bash"
-          f.puts "#{qemu_kvm} -name #{name} -cpu qemu64,+vmx,+svm -memory #{spec[:memory]} \\"
+          f.puts "#{qemu_kvm} -name #{name} -cpu qemu64,+vmx,+svm -m #{spec[:memory]} \\"
           f.puts "-smp 1 -vnc 127.0.0.1:110#{port} -k en-us -rtc base=utc \\"
           f.puts "-monitor telnet:127.0.0.1:140#{port},server,nowait \\"
           f.puts "-serial telnet:127.0.0.1:150#{port},server,nowait \\"
@@ -154,7 +156,7 @@ module Builder::Hypervisors
             i = i + 1
           end
 
-          f.puts "-pidfile kvm.pid -daemonize -enable"
+          f.puts "-pidfile kvm.pid -daemonize"
 
           i = 0
           spec[:nics].keys.each do |eth|
