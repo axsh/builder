@@ -149,7 +149,20 @@ module Builder::Hypervisors
             i = i + 1
           end
 
-          f.puts "-pidfile kvm.pid -daemonize -enable-kvm"
+          f.puts "-pidfile kvm.pid -daemonize -enable"
+
+          i = 0
+          spec[:nics].keys.each do |eth|
+            network = network_spec(spec[:nics][eth][:network].to_sym)
+            cmd = bridge_cmd(network[:bridge_type])
+            addif = bridge_addif_cmd(network[:bridge_type])
+            bridge = network[:bridge_name]
+            port = "#{name}-#{i}"
+
+            f.puts "#{cmd} #{addif} #{bridge} #{port}"
+            f.puts "ip link set #{port} up"
+            i = i + 1
+          end
         end
         info "runscript created"
       end

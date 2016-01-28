@@ -3,6 +3,9 @@ require 'builder'
 module Builder
   class Networks
     class << self
+      include Builder::Helpers::Config
+      include Builder::Helpers::Logger
+
       def provision(name = :all)
         if name == :all
           networks.keys.each {|n| provision(n) }
@@ -10,7 +13,9 @@ module Builder
           network = network_spec(name)
           cmd = send("#{network[:bridge_type].to_s}_addbr")
           system("#{sudo} #{cmd} #{network[:bridge_name]}")
-          system("#{sudo} ifup #{network[:bridge_name]}")
+          system("#{sudo} ip link set #{network[:bridge_name]} up")
+
+          info "bridge #{network[:bridge_name]} created"
         end
       end
 
@@ -18,13 +23,6 @@ module Builder
 
       def sudo
         `whoami` =~ /root/ ? '' : 'sudo'
-      end
-      def networks
-        Builder.recipe[:networks]
-      end
-
-      def network_spec(name)
-        networks[name]
       end
 
       def ovs_addbr
