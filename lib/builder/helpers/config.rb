@@ -1,7 +1,11 @@
 module Builder::Helpers
   module Config
-    def nodes
+    def recipe
       Builder.recipe[:nodes]
+    end
+
+    def nodes
+      recipe[:nodes]
     end
 
     def node_spec(name)
@@ -40,6 +44,18 @@ module Builder::Helpers
 
     def config
       Builder.config
+    end
+
+    def recipe_save
+      File.open("builder.yml", "w") do |f|
+        f.write recipe.to_yaml
+      end
+    end
+
+    def config_save
+      File.open(".builder", "w") do |f|
+        f.write config.to_yaml
+      end
     end
   end
 end
