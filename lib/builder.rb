@@ -19,6 +19,7 @@ module Builder
 
   module Hypervisors
     autoload :Kvm, 'builder/hypervisors/kvm'
+    autoload :Aws, 'builder/hypervisors/aws'
   end
 
   module Helpers
