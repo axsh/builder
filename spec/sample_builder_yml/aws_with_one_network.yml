@@ -1,0 +1,26 @@
+---
+networks:
+  aws:
+    network_type: "aws"
+    ipv4_network: "192.168.100.0"
+    prefix: 24
+    vpc_id:
+    subnet_id:
+nodes:
+  dcmgr:
+    provision: 
+      spec:
+        type: "aws"
+        ami: "ami-xxxxxx"
+        instance_type: "t2.micro"
+        key_pair: 'keypair'
+        nics:
+          eth0:
+            network: "aws"
+            enable_public_ip: true
+      provisioner: "shell"
+      data:
+        - "/path/to/provision_script"
+    ssh:
+      user: "ec2-user"
+      key: "/path/to/private_key"
