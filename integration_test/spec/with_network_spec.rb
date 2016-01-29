@@ -10,7 +10,7 @@ describe "with_network" do
     sudo = `whoami` =~ /root/ ? '' : 'sudo'
 
     Builder.recipe[:networks].each do |k, v|
-      cmd = v[:bridge_type] == 'ovs' ? 'ovs-vsctl del-br' : 'brctl delbr'
+      cmd = v[:network_type] == 'ovs' ? 'ovs-vsctl del-br' : 'brctl delbr'
       system("#{sudo} ip link set #{v[:bridge_name]} down")
       system("#{sudo} #{cmd} #{v[:bridge_name]}")
 
@@ -36,7 +36,7 @@ describe "with_network" do
     subject.invoke(:exec)
 
     networks.each do |k, v|
-      cmd = v[:bridge_type] == 'ovs' ? 'ovs-vsctl' : 'brctl'
+      cmd = v[:network_type] == 'ovs' ? 'ovs-vsctl' : 'brctl'
       sudo = `whoami` =~ /root/ ? '' : 'sudo'
       expect(`#{sudo} #{cmd} show`).to include(v[:bridge_name])
     end

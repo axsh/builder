@@ -212,8 +212,8 @@ module Builder::Hypervisors
           i = 0
           spec[:nics].keys.each do |eth|
             network = network_spec(spec[:nics][eth][:network].to_sym)
-            cmd = bridge_cmd(network[:bridge_type])
-            addif = bridge_addif_cmd(network[:bridge_type])
+            cmd = bridge_cmd(network[:network_type])
+            addif = bridge_addif_cmd(network[:network_type])
             bridge = network[:bridge_name]
             port = "#{name}-#{i}"
 

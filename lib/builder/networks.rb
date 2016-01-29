@@ -12,10 +12,10 @@ module Builder
         else
           network = network_spec(name)
 
-          if system("ip link show #{network[:bridge_type]}")
-            info "#{network[:bridge_type]} already exists. skip creation"
+          if system("ip link show #{network[:network_type]}")
+            info "#{network[:network_type]} already exists. skip creation"
           else
-            cmd = send("#{network[:bridge_type].to_s}_addbr")
+            cmd = send("#{network[:network_type].to_s}_addbr")
             system("#{sudo} #{cmd} #{network[:bridge_name]}")
             system("#{sudo} ip link set #{network[:bridge_name]} up")
 

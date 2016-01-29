@@ -1,12 +1,12 @@
 ---
 networks:
   local:
-    bridge_type: "linux"
+    network_type: "linux"
     bridge_name: "brlocal"
     ipv4_network: "192.168.100.0"
     prefix: 24
   manage:
-    bridge_type: "linux"
+    network_type: "linux"
     bridge_name: "brmanage"
     ipv4_network: "172.16.0.0"
     ipv4_gateway: "172.16.0.1"
