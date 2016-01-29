@@ -13,6 +13,10 @@ describe "with_network" do
       cmd = v[:bridge_type] == 'ovs' ? 'ovs-vsctl del-br' : 'brctl delbr'
       system("#{sudo} ip link set #{v[:bridge_name]} down")
       system("#{sudo} #{cmd} #{v[:bridge_name]}")
+
+      if v[:masquerade]
+        system("#{sudo} iptables -t nat -D POSTROUTING -s #{v[:ipv4_network]}/#{v[:prefix]} -j MASQUERADE")
+      end
     end
 
     system("#{sudo} kill -9 `#{sudo} cat #{Builder.config[:builder_root]}/dcmgr/kvm.pid`")

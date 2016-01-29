@@ -24,6 +24,7 @@ module Builder::Hypervisors
         expand_disk_size(node_image_path, disk_size)
         create_nics(nics, node_dir, node_image_path)
         install_ssh_key(nodes[name][:ssh][:key], node_dir, node_image_path)
+        install_scripts(nodes[name][:provision][:data], node_dir, node_image_path)
         create_runscript(name, node_dir, node_spec(name))
 
         launch(name)
@@ -80,13 +81,15 @@ module Builder::Hypervisors
       def expand_disk_size(node_image_path, disk_size)
         info "expand disk size"
 
-        system("qemu-img resize #{node_image_path} +#{disk_size}")
+        system("qemu-img resize #{node_image_path} +#{disk_size}G")
 
-        info "image resized upto #{disk_size}"
+        info "image resized upto #{disk_size}G"
 
+        system("parted --script -- #{node_image_path} p")
         system("parted --script -- #{node_image_path} rm 2")
         system("parted --script -- #{node_image_path} rm 1")
         system("parted --script -- #{node_image_path} mkpart primary ext4 63s 100%")
+        system("parted --script -- #{node_image_path} p")
 
         info "created new partitions"
       end
@@ -107,14 +110,11 @@ module Builder::Hypervisors
           nic_path = "#{mnt}/etc/sysconfig/network-scripts"
 
           File.open(tmp_path, "w") do |f|
-            f.puts "DEVICE=#{eth}"
-            f.puts "TYPE=Ethernet"
-            f.puts "ONBOOT=yes"
-            f.puts "BOOTPROTO=#{nics[eth][:bootproto]}"
-            f.puts "IPADDR=#{nics[eth][:ip]}" if nics[eth][:ip]
-            f.puts "PREFIX=#{nics[eth][:prefix]}" if nics[eth][:prefix]
-
-            f.puts "DEFROUTE=#{nics[eth][:defroute]}" if nics[eth][:defroute]
+            nics[eth].each do |k, v|
+              next if k == :network
+              next if k == :mac_address
+              f.puts "#{k.to_s.upcase}=#{v}"
+            end
           end
 
           if system("#{sudo} mv #{tmp_path} #{nic_path}")
@@ -141,6 +141,34 @@ module Builder::Hypervisors
         FileUtils.mkdir_p("#{mnt}/root/.ssh") if not Dir.exist?("#{mnt}/root/.ssh")
         File.open("#{mnt}/root/.ssh/authorized_keys", "w") do |f|
           f.puts key.ssh_public_key
+        end
+
+        system("#{sudo} umount #{mnt}")
+        info "umount image"
+      end
+
+      def install_scripts(script_path, node_dir, node_image_path)
+        mnt = "#{node_dir}/mnt"
+        if not Dir.exist?(mnt)
+          system("mkdir -p #{mnt}")
+        end
+
+        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
+        info "mount image"
+        system("mkdir -p #{mnt}/scripts")
+
+        script_path.each do |s|
+          system("cp #{s} #{mnt}/scripts/")
+        end
+
+        system("chmod +x #{mnt}/scripts/*")
+
+        File.open("#{mnt}/etc/rc.d/rc.local", "w") do |f|
+          f.puts "#!/bin/bash"
+          f.puts "resize2fs /dev/vda1"
+          f.puts "for i in `find /scripts/ -type f | sort`; do"
+          f.puts "${i}"
+          f.puts "done"
         end
 
         system("#{sudo} umount #{mnt}")

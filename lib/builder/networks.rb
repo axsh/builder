@@ -23,6 +23,10 @@ module Builder
               system("#{sudo} ip addr add #{network[:ipv4_gateway]}/#{network[:prefix]} dev #{network[:bridge_name]}")
             end
 
+            if network[:masquerade]
+              system("#{sudo} iptables -t nat -A POSTROUTING -s #{network[:ipv4_network]}/#{network[:prefix]} -j MASQUERADE")
+            end
+
             info "bridge #{network[:bridge_name]} created"
           end
         end
