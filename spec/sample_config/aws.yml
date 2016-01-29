@@ -5,3 +5,5 @@ seed_image_path:
 aws_access_key: 'AAAAAA'
 aws_secret_key: 'BBBBBB'
 aws_region: 'us-west-2'
+global_cidrs:
+  - "10.215.43.129"
