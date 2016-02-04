@@ -8,7 +8,7 @@ module Builder::Hypervisors
       include Builder::Helpers::Logger
 
       def provision(name)
-        Builder::Network.provision
+        Builder::Networks.provision
 
         ::Aws.config.update({
           region: config[:aws_region],
@@ -41,6 +41,8 @@ module Builder::Hypervisors
         i = ::Aws::EC2::Instance.new(id: node[:instance_id])
         info "Create instance #{node[:instance_id]}"
         i.wait_until_running
+
+        nodes[name][:ssh][:ip] = i.public_ip_address
 
         recipe_save
         config_save

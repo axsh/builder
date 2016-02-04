@@ -30,8 +30,8 @@ module Builder::Cli
       def config_loader(c)
         c[:builder_root] ||= "#{File.expand_path("../../../../default_builder_dir", __FILE__)}"
         c[:seed_image_path] ||= "#{c[:builder_root]}/seed"
-        c[:aws_access_key] ||= ENV["AWS_ACCESS_KEY"]
-        c[:aws_secret_key] ||= ENV["AWS_SECRET_KEY"]
+        c[:aws_access_key] = c[:aws_access_key] || ENV["AWS_ACCESS_KEY"]
+        c[:aws_secret_key] = c[:aws_secret_key] || ENV["AWS_SECRET_KEY"]
 
         if not Dir.exist?(c[:builder_root])
           FileUtils.mkdir_p(c[:builder_root])

@@ -1,7 +1,7 @@
 module Builder::Helpers
   module Config
     def recipe
-      Builder.recipe[:nodes]
+      Builder.recipe
     end
 
     def nodes
@@ -48,13 +48,13 @@ module Builder::Helpers
 
     def recipe_save
       File.open("builder.yml", "w") do |f|
-        f.write recipe.to_yaml
+        f.write recipe.stringify_keys.to_yaml
       end
     end
 
     def config_save
       File.open(".builder", "w") do |f|
-        f.write config.to_yaml
+        f.write config.stringify_keys.to_yaml
       end
     end
   end

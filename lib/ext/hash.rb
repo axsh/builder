@@ -13,4 +13,19 @@ class Hash
       symbolized
     end
   end
+
+  def stringify_keys
+    self.inject({}) do |stringified, (key, value)|
+      value = case value
+      when Array
+        value.map{|v| v.is_a?(Hash) ? v.stringify_keys : v }
+      when Hash
+        value.stringify_keys
+      else
+        value
+      end
+      stringified[ (key.to_s rescue key) || key ] = value
+      stringified
+    end
+  end
 end

@@ -53,8 +53,11 @@ module Builder
         else
           raise "InvalidParameter" if n[:prefix] < 8
 
+          network_address = IPAddr.new("#{n[:ipv4_network]}/#{n[:prefix]-8}").to_s
+          prefix = n[:prefix] - 8
+
           v[:vpc_id] = ec2.create_vpc(
-              cidr_block: IPAddr.new("#{n[:ipv4_n]}/#{n[:prefix]-8}").to_s,
+              cidr_block: "#{network_address}/#{prefix}",
               instance_tenancy: "default").vpc.vpc_id
 
           info "Create VPC #{v[:vpc_id]}"
@@ -82,10 +85,10 @@ module Builder
 
           info "Create route table #{v[:route_table_id]}"
 
-          ec2.associate_route_table({
+          v[:association_id] = ec2.associate_route_table({
             subnet_id: n[:subnet_id],
             route_table_id: v[:route_table_id]
-          })
+          }).association_id
         end
 
 
@@ -118,12 +121,12 @@ module Builder
             vpc_id: v[:vpc_id]
           }).group_id
 
-          secg = ::Aws::EC2::SecurityGroup.new(id: secg_id)
+          secg = ::Aws::EC2::SecurityGroup.new(id: v[:secg_id])
 
           if secg.data.ip_permissions.empty?
             secg.authorize_ingress(ip_permissions: [{ip_protocol: "-1", from_port: nil, to_port: nil, user_id_group_pairs: [{group_id: "#{v[:secg_id]}"}]}])
 
-            config['global_cidrs'].each do |global_cidr|
+            config[:global_cidrs].each do |global_cidr|
               secg.authorize_ingress(ip_permissions: [{ip_protocol: "-1", from_port: nil, to_port: nil, ip_ranges: [{cidr_ip: "#{global_cidr}"}]}])
               secg.authorize_egress(ip_permissions: [{ip_protocol: "-1", from_port: nil, to_port: nil, ip_ranges: [{cidr_ip: "#{global_cidr}"}]}])
             end

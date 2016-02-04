@@ -10,9 +10,9 @@ nodes:
     provision: 
       spec:
         type: "aws"
-        image_id: "ami-xxxxxx"
+        image_id: "ami-4d5d577d"
         instance_type: "t2.micro"
-        key_pair: 'keypair'
+        key_pair: 'axsh-tis'
         nics:
           eth0:
             network: "aws"
@@ -21,4 +21,11 @@ nodes:
         - "/path/to/provision_script"
     ssh:
       user: "ec2-user"
-      key: "/path/to/private_key"
+      key: "/path/to/private_key2"
+vpc_info:
+  name: "buider_test"
+  vpc_id:
+  route_table_id:
+  igw_id:
+  secg_id:
+

@@ -11,23 +11,37 @@ describe "aws" do
   after(:all) do
     config = Builder.config
     vpc_info = Builder.recipe[:vpc_info]
+    nodes = Builder.recipe[:nodes]
+    networks = Builder.recipe[:networks]
+
     ::Aws.config.update({
       region: config[:aws_region],
       credentials: ::Aws::Credentials.new(config[:aws_access_key], config[:aws_secret_key])
     })
     ec2 = ::Aws::EC2::Client.new
-    ec2.delete_vpc(id: vpc_info[:vpc_id])
+
+    instance_id = nodes[:dcmgr][:provision][:spec][:instance_id]
+    instance = ::Aws::EC2::Instance.new(id: instance_id)
+    instance.terminate
+    instance.wait_until_terminated
+
+    ec2.delete_security_group(group_id: vpc_info[:secg_id])
+    ec2.disassociate_route_table(association_id: vpc_info[:association_id])
+    ec2.detach_internet_gateway(internet_gateway_id: vpc_info[:igw_id], vpc_id: vpc_info[:vpc_id])
+    ec2.delete_internet_gateway(internet_gateway_id: vpc_info[:igw_id])
+    ec2.delete_subnet(subnet_id: networks[:aws][:subnet_id])
+    ec2.delete_vpc(vpc_id: vpc_info[:vpc_id])
   end
 
   subject { Builder::Cli::Root.new }
 
-  let(:name) { :aws }
+  let(:name) { :dcmgr }
   let(:config) { Builder.config }
 
   let(:nodes) { Builder.recipe[:nodes] }
   let(:networks) { Builder.recipe[:networks] }
 
-  describe "create an AWS instance" do
+  it "create an AWS instance" do
     subject.invoke(:exec)
     expect(ping_to(nodes[name][:ssh][:ip])).to eq true
   end
