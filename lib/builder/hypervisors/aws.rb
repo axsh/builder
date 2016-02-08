@@ -1,5 +1,6 @@
 require 'builder'
 require 'aws-sdk'
+require 'base64'
 
 module Builder::Hypervisors
   class Aws
@@ -30,8 +31,10 @@ module Builder::Hypervisors
           i = i + 1
         end
         
+        user_data = Base64.encode64(File.read(nodes[name][:provision][:data]))
         node[:instance_id] = ec2.run_instances({
           image_id: node[:image_id],
+          user_data: user_data,
           min_count: 1,
           max_count: 1,
           key_name: node[:key_pair],
