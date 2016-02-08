@@ -17,8 +17,7 @@ nodes:
           eth0:
             network: "aws"
       provisioner: "shell"
-      data:
-        - "/path/to/provision_script"
+      data: "/path/to/provision_script"
     ssh:
       user: "ec2-user"
       key: "/path/to/private_key2"
