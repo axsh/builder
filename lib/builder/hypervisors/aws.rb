@@ -9,8 +9,6 @@ module Builder::Hypervisors
       include Builder::Helpers::Logger
 
       def provision(name)
-        Builder::Networks.provision
-
         ::Aws.config.update({
           region: config[:aws_region],
           credentials: ::Aws::Credentials.new(config[:aws_access_key], config[:aws_secret_key])

@@ -1,6 +1,7 @@
 require 'builder'
 require 'aws-sdk'
 require 'ipaddr'
+require 'base64'
 
 module Builder
   class Networks
@@ -9,15 +10,25 @@ module Builder
       include Builder::Helpers::Logger
 
       def provision(name = :all)
+        @vpn_setup ||= false
+
+        types = []
+        Builder.recipe[:networks].map {|k, v| types << v[:network_type] }
+        @vpn_setup = true if types.uniq.size > 1
+
+        _provision(name)
+      end
+
+      private
+
+      def _provision(name = :all)
         if name == :all
-          networks.keys.each {|n| provision(n) }
+          networks.keys.each {|n| _provision(n) }
         else
           network = network_spec(name)
           send("network_#{network[:network_type].to_s}", network)
         end
       end
-
-      private
 
       def network_linux(network)
         if system("ip link show #{network[:bridge_name]}")
@@ -133,7 +144,38 @@ module Builder
           end
           secg.load
           info "Create secg #{v[:secg_id]}"
+
+          if @vpn_setup
+            nics = [{ 
+              :device_index => 0,
+              :subnet_id => n[:subnet_id],
+              :groups => [v[:secg_id]],
+              :associate_public_ip_address => true,
+            }]
+
+            user_data = Base64.encode64(File.read("/path/to/vpn"))
+
+            id = ec2.run_instances({
+              image_id: v[:image_id],
+              user_data: user_data,
+              min_count: 1,
+              max_count: 1,
+              key_name: v[:key_pair],
+              instance_type: 't2.micro',
+              network_interfaces: nics
+            }).instances.first.instance_id
+
+            i = ::Aws::EC2::Instance.new(id: id)
+            info "Create instance #{id}"
+            i.wait_until_running
+
+            v[:instance_id] = id
+            v[:public_ip_address] = i.public_ip_address
+            @vpn_setup = false
+          end
         end
+        recipe_save
+        config_save
       end
 
       def sudo

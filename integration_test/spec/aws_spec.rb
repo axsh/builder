@@ -20,10 +20,11 @@ describe "aws" do
     })
     ec2 = ::Aws::EC2::Client.new
 
-    instance_id = nodes[:dcmgr][:provision][:spec][:instance_id]
-    instance = ::Aws::EC2::Instance.new(id: instance_id)
-    instance.terminate
-    instance.wait_until_terminated
+    [nodes[:dcmgr][:provision][:spec][:instance_id], Builder.recipe[:vpc_info][:instance_id]].each do |instance_id|
+      instance = ::Aws::EC2::Instance.new(id: instance_id)
+      instance.terminate
+      instance.wait_until_terminated
+    end
 
     ec2.delete_security_group(group_id: vpc_info[:secg_id])
     ec2.disassociate_route_table(association_id: vpc_info[:association_id])
@@ -43,6 +44,7 @@ describe "aws" do
 
   it "create an AWS instance" do
     subject.invoke(:exec)
+    expect(ping_to(Builder.recipe[:vpc_info][:public_ip_address])).to eq true
     expect(ping_to(nodes[name][:ssh][:ip])).to eq true
   end
 end

@@ -19,6 +19,7 @@ module Builder::Cli
 
     desc "exec", "exec"
     def exec(name = :all)
+      Builder::Networks.provision
       Builder::Nodes.provision(name)
     end
 
