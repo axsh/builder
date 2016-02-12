@@ -80,6 +80,30 @@ module Builder
         config_save
       end
 
+      def mesh_network
+        binding.pry
+        provisioned = Builder.recipe[:nodes].select {|n| n.include?(:provision) }
+        aws_provisioned = provisioned.select {|n| n[:provision][:spec][:type] == "aws" }
+        kvm_provisioned = provisioned.select {|n| n[:provision][:spec][:type] == "kvm" }
+
+        aws_server_ip = Builder.recipe[:vpc_info][:public_ip_address]
+        aws_server_key = Builder.recipe[:vpc_info][:key]
+
+        i = 0
+        Net::SSH.start(aws_server_ip, 'ec2-user', :keys => [aws_server_key]) do |ssh|
+          commands = []
+
+          aws_provisioned.each do |n|
+            n[:provision][:spec][:nics].each do |k, v|
+              commands << "sudo ovs-vsctl add-port brtun t#{i} -- set interface t#{i} type gre options:remote_ip=#{v[:ipaddr]}"
+              i = i + 1
+            end
+          end
+
+          ssh_exec(ssh, commands)
+        end
+      end
+
       private
 
       def _provision(name)
@@ -232,11 +256,25 @@ module Builder
 
             v[:instance_id] = id
             v[:public_ip_address] = i.public_ip_address
+            v[:private_ip_address] = i.network_interfaces.first.private_ip_address
             @vpn_setup_flags[:aws] = false
           end
         end
         recipe_save
         config_save
+      end
+
+
+      def ssh_exec(ssh, commands)
+        ssh.open_channel do |ch|
+          ch.request_pty do |ch, success|
+            ch.exec commands.join(';') do |ch, success|
+              ch.on_data do |ch, data|
+                data.chomp.split("\n").each { |d| info d }
+              end
+            end
+          end
+        end
       end
 
       def sudo
