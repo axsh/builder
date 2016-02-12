@@ -44,7 +44,6 @@ describe "vdc" do
 
   it "vdc" do
     subject.invoke(:exec)
-    expect(ping_to(Builder.recipe[:vpc_info][:public_ip_address])).to eq true
     expect(ping_to(nodes[name][:ssh][:ip])).to eq true
   end
 end

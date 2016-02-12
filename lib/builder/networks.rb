@@ -9,19 +9,80 @@ module Builder
       include Builder::Helpers::Config
       include Builder::Helpers::Logger
 
-      def provision(name = :all)
-        @vpn_setup ||= false
+      def provision
+        @vpn_setup_flags = {}
 
         types = []
         Builder.recipe[:networks].map {|k, v| types << v[:network_type] }
-        @vpn_setup = true if types.uniq.size > 1
+        if types.uniq.size > 1
+          types.each {|type| @vpn_setup_flags[type.to_sym] = true }
+        end
 
-        _provision(name)
+        _provision(:all)
+
+        if @vpn_setup_flags[:linux]
+          expected_nodes = Builder.recipe[:nodes].select {|k,v| !v.include?(:provision) }
+
+          linux_networks = Builder.recipe[:networks].select {|k,v| v[:network_type] == "linux" }
+          nics = {}
+          i = 0
+          ssh_ip = nil
+          linux_networks.each do |k, v|
+            key = "eth#{i}"
+
+            _ip = IPAddr.new("#{v[:ipv4_network]}/#{v[:prefix]}")
+            ip = IPAddr.new(_ip.to_i+2, Socket::AF_INET).to_s
+            nics[key] = {
+              :network => k,
+              :device => key,
+              :bootproto => "static",
+              :onboot => "yes",
+              :ipaddr => ip,
+              :prefix => v[:prefix],
+              :mac_address => "52:54:FF:00:00:#{sprintf("%02d", i)}"
+            }
+
+            if v[:ipv4_gateway]
+              nics[key][:gateway] = v[:ipv4_gateway]
+              nics[key][:defroute] = "yes"
+              ssh_ip = ip
+            end
+
+            i = i + 1
+          end
+
+          i = 0
+          expected_nodes.each do |k, v|
+            name = "vpn#{i}"
+            Builder.recipe[:nodes][name] = {
+              :provision => {
+                :spec => {
+                  :type => 'kvm',
+                  :disk => 10,
+                  :memory => 1000,
+                  :nics => nics
+                },
+                :provisioner => "shell",
+                :data => "/path/to/vpn2",
+                :user_data => Builder.recipe[:vpc_info][:public_ip_address]
+              },
+              :ssh => {
+                :from => k.to_s,
+                :ip => ssh_ip,
+                :user => 'root',
+                :key => '/path/to/private_key'
+              }
+            }
+          end
+          @vpn_setup_flags[:linux] = false
+        end
+        recipe_save
+        config_save
       end
 
       private
 
-      def _provision(name = :all)
+      def _provision(name)
         if name == :all
           networks.keys.each {|n| _provision(n) }
         else
@@ -145,7 +206,7 @@ module Builder
           secg.load
           info "Create secg #{v[:secg_id]}"
 
-          if @vpn_setup
+          if @vpn_setup_flags[:aws]
             nics = [{ 
               :device_index => 0,
               :subnet_id => n[:subnet_id],
@@ -171,7 +232,7 @@ module Builder
 
             v[:instance_id] = id
             v[:public_ip_address] = i.public_ip_address
-            @vpn_setup = false
+            @vpn_setup_flags[:aws] = false
           end
         end
         recipe_save

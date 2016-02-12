@@ -23,6 +23,11 @@ module Builder::Hypervisors
         create_nics(nics, node_dir, node_image_path)
         install_ssh_key(nodes[name][:ssh][:key], node_dir, node_image_path)
         install_scripts(nodes[name][:provision][:data], node_dir, node_image_path)
+
+        if nodes[name][:provision].include?(:user_data)
+          user_data(nodes[name][:provision][:user_data], node_dir, node_image_path)
+        end
+
         create_runscript(name, node_dir, node_spec(name))
 
         launch(name)
@@ -155,9 +160,7 @@ module Builder::Hypervisors
         info "mount image"
         system("mkdir -p #{mnt}/scripts")
 
-        script_path.each do |s|
-          system("cp #{s} #{mnt}/scripts/")
-        end
+        system("cp #{script_path} #{mnt}/scripts/")
 
         system("chmod +x #{mnt}/scripts/*")
 
@@ -168,6 +171,21 @@ module Builder::Hypervisors
           f.puts "${i}"
           f.puts "done"
         end
+
+        system("#{sudo} umount #{mnt}")
+        info "umount image"
+      end
+
+      def user_data(user_data, node_dir, node_image_path)
+        mnt = "#{node_dir}/mnt"
+        if not Dir.exist?(mnt)
+          system("mkdir -p #{mnt}")
+        end
+
+        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
+        info "mount image"
+
+        system("echo #{user_data} > #{mnt}/user_data")
 
         system("#{sudo} umount #{mnt}")
         info "umount image"
