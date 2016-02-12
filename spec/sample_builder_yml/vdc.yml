@@ -18,7 +18,7 @@ networks:
     prefix: 24
     subnet_id:
 nodes:
-  bare-metal:
+  bare_metal:
     ssh:
       ip: "172.16.64.10"
       user: "root"
@@ -67,7 +67,7 @@ nodes:
       provisioner: "shell"
       data: "/path/to/provision_script"
     ssh:
-      from: "bare-metal"
+      from: "bare_metal"
       ip: "172.16.0.2"
       user: "root"
       key: "/path/to/private_key"
