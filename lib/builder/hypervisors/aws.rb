@@ -45,6 +45,13 @@ module Builder::Hypervisors
 
         nodes[name][:ssh][:ip] = i.public_ip_address
 
+        aws_nics = i.network_interfaces
+        i = 0
+        node[:nics].each do |k, v|
+          v[:ipaddr] = aws_nics[i].private_ip_address
+          i = i + 1
+        end
+
         recipe_save
         config_save
       end
