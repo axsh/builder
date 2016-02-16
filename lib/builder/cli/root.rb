@@ -21,6 +21,7 @@ module Builder::Cli
     def exec(name = :all)
       Builder::Networks.provision
       Builder::Nodes.provision(name)
+      Builder::Networks.mesh_network
     end
 
     no_tasks {

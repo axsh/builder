@@ -2,6 +2,8 @@ require 'builder'
 require 'aws-sdk'
 require 'ipaddr'
 require 'base64'
+require 'net/ssh'
+require 'net/ssh/proxy/command'
 
 module Builder
   class Networks
@@ -81,10 +83,9 @@ module Builder
       end
 
       def mesh_network
-        binding.pry
-        provisioned = Builder.recipe[:nodes].select {|n| n.include?(:provision) }
-        aws_provisioned = provisioned.select {|n| n[:provision][:spec][:type] == "aws" }
-        kvm_provisioned = provisioned.select {|n| n[:provision][:spec][:type] == "kvm" }
+        provisioned = Builder.recipe[:nodes].select {|k, v| v.include?(:provision) }
+        aws_provisioned = provisioned.select {|k, v| v[:provision][:spec][:type] == "aws" }
+        kvm_provisioned = provisioned.select {|k, v| v[:provision][:spec][:type] == "kvm" }
 
         aws_server_ip = Builder.recipe[:vpc_info][:public_ip_address]
         aws_server_key = Builder.recipe[:vpc_info][:key]
@@ -93,18 +94,106 @@ module Builder
         Net::SSH.start(aws_server_ip, 'ec2-user', :keys => [aws_server_key]) do |ssh|
           commands = []
 
-          aws_provisioned.each do |n|
-            n[:provision][:spec][:nics].each do |k, v|
-              commands << "sudo ovs-vsctl add-port brtun t#{i} -- set interface t#{i} type gre options:remote_ip=#{v[:ipaddr]}"
+          aws_provisioned.each do |k, v|
+            v[:provision][:spec][:nics].each do |k, v|
+              commands << "sudo ovs-vsctl add-port brtun t#{i} -- set interface t#{i} type=gre options:remote_ip=#{v[:ipaddr]}"
               i = i + 1
             end
           end
 
           ssh_exec(ssh, commands)
         end
+
+        aws_provisioned.each do |k, v|
+          commands = []
+          Net::SSH.start(v[:ssh][:ip], v[:ssh][:user], :keys => [v[:ssh][:key]]) do |ssh|
+            commands << "sudo ovs-vsctl add-port brtun t#{i} -- set interface t#{i} type=gre options:remote_ip=#{Builder.recipe[:vpc_info][:private_ip_address]}"
+            ssh_exec(ssh, commands)
+          end
+        end
+
+        vpn_provisioned = provisioned.select {|k, v| k =~ /vpn/ }
+        kvm_provisioned.each do |k, v|
+          if v[:ssh].include?(:from)
+            parent = Builder.recipe[:nodes][v[:ssh][:from].to_sym]
+            proxy = Net::SSH::Proxy::Command.new("
+              ssh #{parent[:ssh][:ip]} \
+                -l #{parent[:ssh][:user]} \
+                -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                -W %h:%p -i #{parent[:ssh][:key]}
+            ")
+            ssh_options = {}
+            ssh_options[:keys] = [parent[:ssh][:key]]
+            ssh_options[:user_known_hosts_file] = "/dev/null"
+            ssh_options[:paranoid] = false
+            info "connect to #{k}"
+            Net::SSH.start(parent[:ssh][:ip], parent[:ssh][:user], ssh_options) do |ssh|
+              wait_port_22(v[:ssh][:ip])
+            end
+            ssh_options[:proxy] = proxy
+            ssh_options[:keys] = [v[:ssh][:key]]
+            Net::SSH.start(v[:ssh][:ip], v[:ssh][:user], ssh_options) do |ssh|
+              commands = []
+              vpn_provisioned.each do |k, v|
+                ip = v[:provision][:spec][:nics].values.first[:ipaddr]
+                commands << "sudo ovs-vsctl add-port brtun t#{i} -- set interface t#{i} type=gre options:remote_ip=#{ip}"
+              end
+              ssh_exec(ssh, commands)
+              i = i + 1
+            end
+          else
+          end
+        end
+
+        vpn_provisioned.each do |k, v|
+          if v[:ssh].include?(:from)
+            parent = Builder.recipe[:nodes][v[:ssh][:from].to_sym]
+            proxy = Net::SSH::Proxy::Command.new("
+              ssh #{parent[:ssh][:ip]} \
+                -l #{parent[:ssh][:user]} \
+                -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                -W %h:%p -i #{parent[:ssh][:key]}
+            ")
+            ssh_options = {}
+            ssh_options[:keys] = [parent[:ssh][:key]]
+            ssh_options[:user_known_hosts_file] = "/dev/null"
+            ssh_options[:paranoid] = false
+            info "connect to #{k}"
+            Net::SSH.start(parent[:ssh][:ip], parent[:ssh][:user], ssh_options) do |ssh|
+              wait_port_22(v[:ssh][:ip])
+            end
+            ssh_options[:proxy] = proxy
+            ssh_options[:keys] = [v[:ssh][:key]]
+            Net::SSH.start(v[:ssh][:ip], v[:ssh][:user], ssh_options) do |ssh|
+              commands = []
+              kvm_provisioned.each do |k, v|
+                ip = v[:provision][:spec][:nics].values.first[:ipaddr]
+                commands << "sudo ovs-vsctl add-port brtun t#{i} -- set interface t#{i} type=gre options:remote_ip=#{ip}"
+              end
+              ssh_exec(ssh, commands)
+              i = i + 1
+            end
+          else
+          end
+        end
       end
 
       private
+
+      def wait_port_22(ip)
+        i = 1
+        while true
+          if i > 40
+            error "timeout"
+            raise "ExceedTrial"
+          end
+          break if `nmap -p 22 #{ip}`.include?("open")
+          sleep(1)
+          i = i + 1
+        end
+      end
 
       def _provision(name)
         if name == :all

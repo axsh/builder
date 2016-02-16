@@ -22,7 +22,7 @@ nodes:
     ssh:
       ip: "172.16.64.10"
       user: "root"
-      key: "/path/to/private_key"
+      key: "/path/to/private_key3"
   dcmgr:
     provision: 
       spec:
