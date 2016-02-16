@@ -4,8 +4,8 @@ require 'net/ssh'
 describe Builder::Cli::Root do
 
   before do
-    generate_builder_file(:with_all)
-    generate_builder_config(:simple)
+    generate_builder_file(:vdc)
+    generate_builder_config(:vdc)
   end
 
   subject { Builder::Cli::Root.new }

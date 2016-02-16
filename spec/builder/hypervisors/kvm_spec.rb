@@ -2,8 +2,8 @@ require 'spec_helper'
 
 describe Builder::Hypervisors::Kvm do
   before do
-    generate_builder_file(:with_one_network)
-    generate_builder_config(:simple)
+    generate_builder_file(:vdc)
+    generate_builder_config(:vdc)
     Builder::Cli::Root.new
   end
 
