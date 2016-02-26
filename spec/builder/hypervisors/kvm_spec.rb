@@ -79,7 +79,7 @@ describe Builder::Hypervisors::Kvm do
       expect(File).to receive(:open).at_least(:once)
         .with("#{node_dir}/run.sh", "w")
 
-      expect(subject).to receive(:system).with(/chmod/).and_return(true)
+      expect(subject).to receive(:system).with(anything).and_return(true)
 
       expect {
         subject.send(:create_runscript, name, node_dir, node_spec)
@@ -90,6 +90,8 @@ describe Builder::Hypervisors::Kvm do
 
       allow(File).to receive(:read).with(anything).and_return(true)
       allow(Dir).to receive(:exist)
+
+      allow(subject).to receive(:system).at_most(3).and_return(true)
 
       key_mock = double(:key)
       allow(key_mock).to receive(:ssh_public_key).and_return("ssh_public_key")
