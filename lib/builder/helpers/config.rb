@@ -1,25 +1,5 @@
 module Builder::Helpers
   module Config
-    def recipe
-      Builder.recipe
-    end
-
-    def nodes
-      recipe[:nodes]
-    end
-
-    def node_spec(name)
-      nodes[name][:provision][:spec]
-    end
-
-    def networks
-      Builder.recipe[:networks]
-    end
-
-    def network_spec(name)
-      networks[name]
-    end
-
     def bridge_addif_cmd(type)
       case type
       when 'ovs'
@@ -39,22 +19,6 @@ module Builder::Helpers
         'brctl'
       else
         raise "invalid_type_error"
-      end
-    end
-
-    def config
-      Builder.config
-    end
-
-    def recipe_save
-      File.open("builder.yml", "w") do |f|
-        f.write recipe.stringify_keys.to_yaml
-      end
-    end
-
-    def config_save
-      File.open(".builder", "w") do |f|
-        f.write config.stringify_keys.to_yaml
       end
     end
   end
