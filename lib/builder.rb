@@ -5,11 +5,21 @@ require 'logger'
 
 require_relative 'ext/hash'
 
+def db
+  Builder.db
+end
+
+def config
+  Builder.config
+end
+
 module Builder
+
+  ROOT = ENV['BUILDER_ROOT'] || File.expand_path("../../", __FILE__)
 
   class << self
     attr_accessor :logger
-    attr_accessor :recipe
+    attr_accessor :db
     attr_accessor :config
   end
 
@@ -26,9 +36,6 @@ module Builder
     autoload :Config, 'builder/helpers/config'
     autoload :Logger, 'builder/helpers/logger'
   end
-
-  autoload :Nodes, 'builder/nodes'
-  autoload :Networks, 'builder/networks'
 end
 
 Builder.logger ||= ::Logger.new(STDOUT)
