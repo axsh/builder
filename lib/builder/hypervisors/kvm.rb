@@ -3,6 +3,9 @@ require 'builder'
 require 'zlib'
 require 'archive/tar/minitar'
 require 'sshkey'
+require 'net/ssh'
+require 'net/scp'
+require 'ipaddr'
 
 module Builder::Hypervisors
   class Kvm
@@ -10,238 +13,148 @@ module Builder::Hypervisors
       include Builder::Helpers::Config
       include Builder::Helpers::Logger
 
-      def provision(name)
-        node_dir = "#{config[:builder_root]}/#{name.to_s}"
-        node_image_path = "#{node_dir}/#{name.to_s}.raw"
-        nics = node_spec(name)[:nics]
-        disk_size = node_spec(name)[:disk]
+      def provision(node_name)
+        node = db[:nodes][node_name]
 
-        create_node_dir(node_dir)
-        download_seed_image
-        extract_seed_image(node_dir, node_image_path)
-        expand_disk_size(node_image_path, disk_size)
-        create_nics(nics, node_dir, node_image_path)
-        install_ssh_key(nodes[name][:ssh][:key], node_dir, node_image_path)
-        install_scripts(nodes[name][:provision][:data], node_dir, node_image_path)
 
-        if nodes[name][:provision].include?(:user_data)
-          user_data(nodes[name][:provision][:user_data], node_dir, node_image_path)
-        end
+        if node[:ssh].key?(:from)
 
-        create_runscript(name, node_dir, node_spec(name))
+          parent_name = node[:ssh][:from].to_sym
+          parent = db[:nodes][parent_name]
 
-        launch(name)
-      end
+          if parent[:ssh].key?(:sudo_password) && parent[:ssh][:sudo_password] == true
+            info "Enter password: "
+            password = STDIN.noecho(&:gets).chomp
+          end
 
-      private
+          work_dir = if parent[:ssh][:user] == 'root'
+                       "/root/builder_workspace"
+                     else
+                       "/home/#{parent[:ssh][:user]}/builder_workspace"
+                     end
 
-      def launch(name)
-        info "launch #{name}"
-        system("cd #{config[:builder_root]}/#{name.to_s}; #{sudo} ./run.sh")
-      end
+          kvm_dir        = work_dir + "/" + node_name.to_s
+          kvm_rootfs_dir = work_dir + "/" + node_name.to_s + "/rootfs"
 
-      def sudo
-        `whoami` =~ /root/ ? '' : 'sudo'
-      end
+          k = SSHKey.new(File.read(node[:ssh][:key]))
 
-      def download_seed_image
+          Net::SSH.start(parent[:ssh][:ip], parent[:ssh][:user], :keys => [ parent[:ssh][:key] ]) do |ssh|
 
-        info "download_seed_image"
+            commands = []
+            commands << "mkdir -p #{work_dir} || :"
+            commands << "mkdir -p #{kvm_dir} || :"
+            commands << "mkdir -p #{kvm_rootfs_dir} || :"
+            commands << "mkdir -p #{kvm_rootfs_dir}/etc/sysconfig/network-scripts/ || :"
+            commands << "mkdir -p #{kvm_rootfs_dir}/root/ || :"
+            commands << "mkdir -p #{kvm_rootfs_dir}/root/.ssh || :"
+            commands << "mkdir -p #{kvm_rootfs_dir}/metadata/ || :"
 
-        if File.exist?(config[:seed_image_path])
-          info "skip seed image download. already existed"
-        else
-          system("curl -L #{config[:seed_image_url]} -o #{config[:seed_image_path]}")
-          info "seed image downloaded : #{config[:seed_image_path]}"
-        end
-      end
+            ssh_exec(ssh, commands)
+          end
 
-      def create_node_dir(node_dir)
+          f_mac = File.open("macaddress", "w")
+          f_bridge = File.open("bridge", "w")
 
-        info "create node dir"
+          nic_num = 0
+          node[:provision][:spec][:nics].each do |key, value|
+            f_mac.puts value[:mac_address]
+            f_bridge.puts db[:networks][value[:network].to_sym][:bridge_name]
 
-        if not Dir.exist?(node_dir)
-          system("mkdir -p #{node_dir}")
-          info "directory created : #{node_dir}"
-        else
-          info "directory already existed : #{node_dir}"
-        end
-      end
+            ifcfg_file = File.open("ifcfg-eth#{nic_num}", "w")
 
-      def extract_seed_image(node_dir, node_image_path)
-        info "extract seed image"
-
-        Zlib::GzipReader.open(config[:seed_image_path]) do |gz|
-          Archive::Tar::Minitar::unpack(gz, node_dir)
-        end
-
-        raw_file = Dir.entries(node_dir).select {|f| /\.raw/ =~ f }.first
-        system("mv #{node_dir}/#{raw_file} #{node_image_path}")
-
-        info "seed image extracted to : #{node_image_path}"
-      end
-
-      def expand_disk_size(node_image_path, disk_size)
-        info "expand disk size"
-
-        system("qemu-img resize #{node_image_path} +#{disk_size}G")
-
-        info "image resized upto #{disk_size}G"
-
-        system("parted --script -- #{node_image_path} p")
-        system("parted --script -- #{node_image_path} rm 2")
-        system("parted --script -- #{node_image_path} rm 1")
-        system("parted --script -- #{node_image_path} mkpart primary ext4 63s 100%")
-        system("parted --script -- #{node_image_path} p")
-
-        info "created new partitions"
-      end
-
-      def create_nics(nics, node_dir, node_image_path)
-        info "create nics"
-
-        mnt = "#{node_dir}/mnt"
-        if not Dir.exist?(mnt)
-          system("mkdir -p #{mnt}")
-        end
-
-        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
-        info "mount image"
-
-        nics.keys.each do |eth|
-          tmp_path = "#{node_dir}/ifcfg-#{eth}"
-          nic_path = "#{mnt}/etc/sysconfig/network-scripts"
-
-          File.open(tmp_path, "w") do |f|
-            nics[eth].each do |k, v|
+            value.each do |k, v|
               next if k == :network
               next if k == :mac_address
-              f.puts "#{k.to_s.upcase}=#{v}"
+              ifcfg_file.puts "#{k.to_s.upcase}=#{v}"
             end
+
+            ifcfg_file.close
+            nic_num = nic_num + 1
           end
 
-          if system("#{sudo} mv #{tmp_path} #{nic_path}")
-            info "nic created : #{nic_path}/ifcfg-#{eth}"
-          else
-            error "mv failed : #{tmp_path}"
-          end
-        end
+          f_mac.close
+          f_bridge.close
 
-        system("#{sudo} umount #{mnt}")
-        info "umount image"
-      end
 
-      def install_ssh_key(ssh_private_key_path, node_dir, node_image_path)
-        mnt = "#{node_dir}/mnt"
-        if not Dir.exist?(mnt)
-          system("mkdir -p #{mnt}")
-        end
+          Net::SCP.start(parent[:ssh][:ip], parent[:ssh][:user], :keys => [ parent[:ssh][:key] ]) do |scp|
+            scp.upload!("#{Builder::ROOT}/builder_scripts/seed_download.sh", work_dir)
+            scp.upload!("#{Builder::ROOT}/builder_scripts/kvm.sh", kvm_dir)
+            scp.upload!("#{Builder::ROOT}/builder_scripts/firstboot.sh", "#{kvm_rootfs_dir}/root")
+            scp.upload!("#{node[:provision][:script]}", kvm_rootfs_dir)
 
-        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
-        info "mount image"
+            scp.upload!("macaddress", kvm_dir)
+            scp.upload!("bridge", kvm_dir)
 
-        key = SSHKey.new(File.read(ssh_private_key_path))
-        FileUtils.mkdir_p("#{mnt}/root/.ssh") if not Dir.exist?("#{mnt}/root/.ssh")
-        File.open("#{mnt}/root/.ssh/authorized_keys", "w") do |f|
-          f.puts key.ssh_public_key
-        end
+            for i in 0..nic_num-1
+              scp.upload("ifcfg-eth#{i}", "#{kvm_rootfs_dir}/etc/sysconfig/network-scripts/")
+            end
 
-        system("#{sudo} umount #{mnt}")
-        info "umount image"
-      end
+            if node[:provision][:spec].include?(:netjoin)
+              ips = eval(`netjoin show_ip kvm`)
 
-      def install_scripts(script_path, node_dir, node_image_path)
-        mnt = "#{node_dir}/mnt"
-        if not Dir.exist?(mnt)
-          system("mkdir -p #{mnt}")
-        end
+              node_ip = node[:provision][:spec][:nics][node[:provision][:spec][:netjoin].to_sym][:ipaddr]
+              ips_map = ips.map {|ip| IPAddr.new("#{ip}/24") }
+              index = ips_map.index(ips_map.select {|i| i.to_i == IPAddr.new("#{node_ip}/24").to_i }.first)
 
-        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
-        info "mount image"
-        system("mkdir -p #{mnt}/scripts")
+              File.open("netjoin_ip", "w") do |f|
+                f.write ips[index]
+              end
 
-        system("cp #{script_path} #{mnt}/scripts/")
+              scp.upload!("netjoin_ip", "#{kvm_rootfs_dir}/metadata/")
+              FileUtils.rm("netjoin_ip")
 
-        system("chmod +x #{mnt}/scripts/*")
+              info "netjoin setup_tunnel kvm #{node_ip}"
+              system("netjoin setup_tunnel kvm #{node_ip}")
+            end
 
-        File.open("#{mnt}/etc/rc.d/rc.local", "w") do |f|
-          f.puts "#!/bin/bash"
-          f.puts "resize2fs /dev/vda1"
-          f.puts "for i in `find /scripts/ -type f | sort`; do"
-          f.puts "${i}"
-          f.puts "done"
-        end
-
-        system("#{sudo} umount #{mnt}")
-        info "umount image"
-      end
-
-      def user_data(user_data, node_dir, node_image_path)
-        mnt = "#{node_dir}/mnt"
-        if not Dir.exist?(mnt)
-          system("mkdir -p #{mnt}")
-        end
-
-        system("#{sudo} mount -o loop,offset=32256 #{node_image_path} #{mnt}")
-        info "mount image"
-
-        system("echo #{user_data} > #{mnt}/user_data")
-
-        system("#{sudo} umount #{mnt}")
-        info "umount image"
-      end
-
-      def create_runscript(name, node_dir, spec)
-        info "create runscript"
-
-        qemu_kvm = if File.exist?("/usr/libexec/qemu-kvm")
-                     "/usr/libexec/qemu-kvm"
-                   elsif File.exist?("/usr/bin/qemu-kvm")
-                     "/usr/bin/qemu-kvm"
-                   else
-                     nil
-                   end
-        info "qemu found in : #{qemu_kvm}"
-
-        return if qemu_kvm.nil?
-
-        port = Random.rand(10..99)
-
-        File.open("#{node_dir}/run.sh", "w") do |f|
-          f.puts "#!/bin/bash"
-          f.puts "#{qemu_kvm} -name #{name} -cpu qemu64,+vmx,+svm -m #{spec[:memory]} \\"
-          f.puts "-smp 1 -vnc 127.0.0.1:110#{port} -k en-us -rtc base=utc \\"
-          f.puts "-monitor telnet:127.0.0.1:140#{port},server,nowait \\"
-          f.puts "-serial telnet:127.0.0.1:150#{port},server,nowait \\"
-          f.puts "-serial file:console.log \\"
-          f.puts "-drive file=./#{name}.raw,media=disk,boot=on,index=0,cache=none,if=virtio \\"
-
-          i = 0
-          spec[:nics].keys.each do |eth|
-            f.puts "-netdev tap,ifname=#{name}-#{i},id=hostnet#{i},script=,downscript= \\"
-            f.puts "-device virtio-net-pci,netdev=hostnet#{i},mac=#{spec[:nics][eth][:mac_address]},bus=pci.0,addr=0x#{i+3} \\"
-            i = i + 1
+            k = SSHKey.new(File.read(node[:ssh][:key]))
+            File.open("authorized_keys", "w") do |f|
+              f.write k.ssh_public_key
+            end
+            scp.upload!("authorized_keys", "#{kvm_rootfs_dir}/root/.ssh")
+            FileUtils.rm("authorized_keys")
           end
 
-          f.puts "-pidfile kvm.pid -daemonize"
+          FileUtils.rm("macaddress")
+          FileUtils.rm("bridge")
 
-          i = 0
-          spec[:nics].keys.each do |eth|
-            network = network_spec(spec[:nics][eth][:network].to_sym)
-            cmd = bridge_cmd(network[:network_type])
-            addif = bridge_addif_cmd(network[:network_type])
-            bridge = network[:bridge_name]
-            port = "#{name}-#{i}"
-
-            f.puts "#{cmd} #{addif} #{bridge} #{port}"
-            f.puts "ip link set #{port} up"
-            i = i + 1
+          for i in 0..nic_num-1
+            FileUtils.rm("ifcfg-eth#{i}")
           end
-        end
-        info "runscript created"
 
-        system("#{sudo} chmod +x #{node_dir}/run.sh")
+          Net::SSH.start(parent[:ssh][:ip], parent[:ssh][:user], :keys => [ parent[:ssh][:key] ]) do |ssh|
+            ssh_exec(ssh, [
+              "chmod +x #{work_dir}/*.sh",
+              "chmod +x #{kvm_dir}/*.sh",
+              "chmod +x #{kvm_rootfs_dir}/*.sh",
+              "chmod +x #{kvm_rootfs_dir}/root/*.sh",
+              "chmod 700 #{kvm_rootfs_dir}/root/.ssh",
+              "chmod 600 #{kvm_rootfs_dir}/root/.ssh/authorized_keys",
+              "sudo chown #{node[:ssh][:user]}.#{node[:ssh][:user]} #{kvm_dir}/*.sh",
+              "#{work_dir}/seed_download.sh",
+            ])
+
+            ssh_exec(ssh,[
+              "sudo #{kvm_dir}/kvm.sh #{node_name.to_s} \
+              #{node[:provision][:spec][:disk]} \
+              #{node[:provision][:spec][:memory]}"
+            ])
+          end
+
+        elsif node.parent == 'self'
+          info "self"
+        else
+          error 'specify node.parent'
+          return
+        end
+
+        node[:provision][:provisioned] = true
+
+        File.open("builder.yml", "w") do |f|
+          f.write db.stringify_keys.to_yaml
+        end
       end
+
     end
   end
 end
